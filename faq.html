@@ -1,0 +1,149 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>FAQ &mdash; ochopod 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/flasky.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="ochopod 1.0 documentation" href="index.html" />
+    <link rel="prev" title="Tools &amp; Automation" href="tools.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+  
+  
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tools.html" title="Tools &amp; Automation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">ochopod 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="faq">
+<h1>FAQ<a class="headerlink" href="#faq" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="is-ochopod-bound-to-docker">
+<h2>Is Ochopod bound to Docker ?<a class="headerlink" href="#is-ochopod-bound-to-docker" title="Permalink to this headline">¶</a></h2>
+<p>No it&#8217;s not. The containerization technology used to run Ochopod does not really matter. Now you have to be aware
+that you may have to play with specific constraints, especially around resource quotas (cpu, memory).</p>
+</div>
+<div class="section" id="how-do-i-get-ochopod-in-my-containers">
+<h2>How do I get Ochopod in my containers ?<a class="headerlink" href="#how-do-i-get-ochopod-in-my-containers" title="Permalink to this headline">¶</a></h2>
+<p>Just include the module in your container image and set it up ! You can that way build a base image that suits your
+needs the best. You just need to install <a class="reference external" href="https://www.python.org/">Python</a> 2.7.</p>
+</div>
+<div class="section" id="do-i-need-mesos-to-take-advantage-of-ochopod">
+<h2>Do I need Mesos to take advantage of Ochopod ?<a class="headerlink" href="#do-i-need-mesos-to-take-advantage-of-ochopod" title="Permalink to this headline">¶</a></h2>
+<p>No you don&#8217;t. Ochopod only relies on <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> for synchronization but can be run anywhere, even on your workstation.
+You could use <a class="reference external" href="http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html">Yarn</a> for instance and have it run a <a class="reference external" href="https://www.docker.com/">Docker</a> container that then invokes Ochopod.</p>
+</div>
+<div class="section" id="do-i-need-to-use-ochopod-on-amazon-ec2">
+<h2>Do I need to use Ochopod on Amazon EC2 ?<a class="headerlink" href="#do-i-need-to-use-ochopod-on-amazon-ec2" title="Permalink to this headline">¶</a></h2>
+<p>Not at all. Ochopod is not tied to any specific environment. You could totally run Ochopod over a cluster of
+bare-metal resources if you wanted to. The only constraint is to be able to find out where you are running from and
+where your synchronization <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> ensemble is.</p>
+</div>
+<div class="section" id="does-ochopod-provision-resources">
+<h2>Does Ochopod provision resources ?<a class="headerlink" href="#does-ochopod-provision-resources" title="Permalink to this headline">¶</a></h2>
+<p>No. Ochopod simply allows several <a class="reference external" href="https://www.docker.com/">Docker</a> containers to coordinate their configuration. Provisioning and resourcing
+are performed one level down, for instance by letting <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> cooperate with <a class="reference external" href="http://mesos.apache.org/">Mesos</a> to run your containers.</p>
+</div>
+<div class="section" id="can-i-perform-elastic-scaling-with-ochopod">
+<h2>Can I perform elastic scaling with Ochopod ?<a class="headerlink" href="#can-i-perform-elastic-scaling-with-ochopod" title="Permalink to this headline">¶</a></h2>
+<p>Yes, you can at the pod level. You could for instance dynamically leverage <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> to scale your applications
+up depending on some metrics. You could also do it one level lower and have your infrastructure scale the <a class="reference external" href="http://mesos.apache.org/">Mesos</a>
+cluster up by physically adding new slaves. This is however not linked to Ochopod directly.</p>
+</div>
+<div class="section" id="can-i-run-ochopod-to-do-windows-stuff">
+<h2>Can I run Ochopod to do Windows stuff ?<a class="headerlink" href="#can-i-run-ochopod-to-do-windows-stuff" title="Permalink to this headline">¶</a></h2>
+<p>Well, if you can find a suitable containerization technology dealing with Windows, it&#8217;s a yes.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/autodesk-logo.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">FAQ</a><ul>
+<li><a class="reference internal" href="#is-ochopod-bound-to-docker">Is Ochopod bound to Docker ?</a></li>
+<li><a class="reference internal" href="#how-do-i-get-ochopod-in-my-containers">How do I get Ochopod in my containers ?</a></li>
+<li><a class="reference internal" href="#do-i-need-mesos-to-take-advantage-of-ochopod">Do I need Mesos to take advantage of Ochopod ?</a></li>
+<li><a class="reference internal" href="#do-i-need-to-use-ochopod-on-amazon-ec2">Do I need to use Ochopod on Amazon EC2 ?</a></li>
+<li><a class="reference internal" href="#does-ochopod-provision-resources">Does Ochopod provision resources ?</a></li>
+<li><a class="reference internal" href="#can-i-perform-elastic-scaling-with-ochopod">Can I perform elastic scaling with Ochopod ?</a></li>
+<li><a class="reference internal" href="#can-i-run-ochopod-to-do-windows-stuff">Can I run Ochopod to do Windows stuff ?</a></li>
+</ul>
+</li>
+</ul>
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="tools.html" title="previous chapter">Tools &amp; Automation</a></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  <div class="footer">
+    &copy; Copyright 2015, Autodesk.
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  
+  </body>
+</html>

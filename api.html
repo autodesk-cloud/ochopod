@@ -1,0 +1,543 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>API &mdash; ochopod 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/flasky.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="ochopod 1.0 documentation" href="index.html" />
+    <link rel="next" title="Tools &amp; Automation" href="tools.html" />
+    <link rel="prev" title="Concepts" href="concepts.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+  
+  
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tools.html" title="Tools &amp; Automation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="concepts.html" title="Concepts"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">ochopod 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="api">
+<h1>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-ochopod">
+<span id="general"></span><h2>General<a class="headerlink" href="#module-ochopod" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="ochopod.enable_cli_log">
+<code class="descclassname">ochopod.</code><code class="descname">enable_cli_log</code><span class="sig-paren">(</span><em>debug=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ochopod.enable_cli_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use this helper to add a rotating file handler to the &#8216;ochopod&#8217; logger. This file will be
+located in /var/log so that the CLI can go get it. This is typically used when your pod is simply running
+another python script (e.g you can log from that script and see it in the CLI).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>debug</strong> (<em>boolean</em>) &#8211; true to switch debug logging on</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-api">
+<span id="data-model"></span><h2>Data model<a class="headerlink" href="#module-api" title="Permalink to this headline">¶</a></h2>
+<p>This is the high-level SDK API you can use to define your pod. A pod script is made of two things :</p>
+<blockquote>
+<div><ul class="simple">
+<li>a <strong>model</strong> defining their clustering characteristics.</li>
+<li>a <strong>life-cycle</strong> with callbacks defining what is being run and how to tear it down.</li>
+</ul>
+</div></blockquote>
+<p>In its simplest form a pod script can be as trivial as:</p>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">ochopod.bindings.ec2.marathon</span> <span class="kn">import</span> <span class="n">Pod</span>
+<span class="kn">from</span> <span class="nn">ochopod.models.piped</span> <span class="kn">import</span> <span class="n">Actor</span> <span class="k">as</span> <span class="n">Piped</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+
+    <span class="k">class</span> <span class="nc">Strategy</span><span class="p">(</span><span class="n">Piped</span><span class="p">):</span>
+
+        <span class="k">def</span> <span class="nf">configure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+
+            <span class="k">return</span> <span class="s">&#39;redis-server&#39;</span><span class="p">,</span> <span class="p">{}</span>
+
+    <span class="n">Pod</span><span class="p">()</span><span class="o">.</span><span class="n">boot</span><span class="p">(</span><span class="n">Strategy</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A slightly more complex example (which for instance customizes the clustering model we wish to use and sets
+an explicit working directory) could be:</p>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">ochopod.bindings.ec2.marathon</span> <span class="kn">import</span> <span class="n">Pod</span>
+<span class="kn">from</span> <span class="nn">ochopod.models.piped</span> <span class="kn">import</span> <span class="n">Actor</span> <span class="k">as</span> <span class="n">Piped</span>
+<span class="kn">from</span> <span class="nn">ochopod.models.reactive</span> <span class="kn">import</span> <span class="n">Actor</span> <span class="k">as</span> <span class="n">Reactive</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+
+    <span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">Reactive</span><span class="p">):</span>
+
+        <span class="n">damper</span> <span class="o">=</span> <span class="mf">30.0</span>
+        <span class="n">full_shutdown</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">sequential</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">class</span> <span class="nc">Strategy</span><span class="p">(</span><span class="n">Piped</span><span class="p">):</span>
+
+        <span class="n">cwd</span> <span class="o">=</span> <span class="s">&#39;/opt/redis&#39;</span>
+
+        <span class="k">def</span> <span class="nf">configure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+
+            <span class="k">return</span> <span class="s">&#39;redis-server&#39;</span><span class="p">,</span> <span class="p">{}</span>
+
+    <span class="n">Pod</span><span class="p">()</span><span class="o">.</span><span class="n">boot</span><span class="p">(</span><span class="n">Strategy</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">Model</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="class">
+<dt id="api.Model">
+<em class="property">class </em><code class="descclassname">api.</code><code class="descname">Model</code><a class="headerlink" href="#api.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract class defining a clustering model (e.g how pods belonging to the same family will orchestrate to
+end up forming a functional cluster).</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="api.Cluster">
+<em class="property">class </em><code class="descclassname">api.</code><code class="descname">Cluster</code><a class="headerlink" href="#api.Cluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cluster description including dependencies. This is what is passed down to you when the pod needs to be configured.</p>
+<p>The <a class="reference internal" href="#api.Cluster.pods" title="api.Cluster.pods"><code class="xref py py-attr docutils literal"><span class="pre">pods</span></code></a> and <a class="reference internal" href="#api.Cluster.dependencies" title="api.Cluster.dependencies"><code class="xref py py-attr docutils literal"><span class="pre">dependencies</span></code></a> dicts contain the registration payload for a set of pods. The keys do
+not really matter (they are random and unique). The payload describes things such as where the pods run, what
+their underlying task identifier is and so on. For instance:</p>
+<div class="code python highlight-python"><div class="highlight"><pre>&quot;195bdf5a-8da4-47de-8c87-00429e71d447&quot;:
+{
+    &quot;application&quot;: &quot;my-service.database.342&quot;,
+    &quot;task&quot;: &quot;my-service.database.4c279439-c336-11e4-ac49-56847afe9799&quot;,
+    &quot;node&quot;: &quot;i-d5d1b53a&quot;,
+    &quot;seq&quot;: 19,
+    &quot;zk&quot;: &quot;10.181.124.223:2181&quot;,
+    &quot;binding&quot;: &quot;marathon&quot;,
+    &quot;namespace&quot;: &quot;my-service&quot;,
+    &quot;port&quot;: &quot;8080&quot;,
+    &quot;cluster&quot;: &quot;database&quot;,
+    &quot;ip&quot;: &quot;10.109.129.218&quot;,
+    &quot;debug&quot;: &quot;true&quot;,
+    &quot;local&quot;: &quot;false&quot;,
+    &quot;public&quot;: &quot;54.145.22.4&quot;,
+    &quot;ports&quot;:
+    {
+        &quot;8080&quot;: 1024
+    }
+}
+</pre></div>
+</div>
+<p>The important settings are &#8220;ip&#8221;, &#8220;public&#8221; and &#8220;ports&#8221; (dict indexing ports the container exposes to their
+dynamically allocated counterpart). You may get additional settings depending on which bindings you use.</p>
+<p>The <a class="reference internal" href="#api.Cluster.seq" title="api.Cluster.seq"><code class="xref py py-attr docutils literal"><span class="pre">seq</span></code></a> integer allows you to identify your pod within your cluster without any ambiguity. The
+<a class="reference internal" href="#api.Cluster.index" title="api.Cluster.index"><code class="xref py py-attr docutils literal"><span class="pre">index</span></code></a> integer has to be used more carefully as any change in the cluster (e.g less pods for instance)
+will not be reflected accurately.</p>
+<dl class="attribute">
+<dt id="api.Cluster.dependencies">
+<code class="descname">dependencies</code><em class="property"> = {}</em><a class="headerlink" href="#api.Cluster.dependencies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pod summary describing your dependencies, as a dict (make sure your clustering model specifies dependencies).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Cluster.grep">
+<code class="descname">grep</code><span class="sig-paren">(</span><em>dependency</em>, <em>port</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Cluster.grep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ancillary helper to look a dependency up by name and return a comma separated connection string. The specified
+connection port is automatically remapped to what the underlying framework allocated. The dependency
+is always assumed to be located in the same namespace.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">the dependency must be valid otherwise an assert will be raised.</p>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">cnxstring</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">grep</span><span class="p">(</span><span class="s">&#39;kafka&#39;</span><span class="p">,</span> <span class="mi">9092</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dependency</strong> (<em>string</em>) &#8211; dependency cluster identifier (e.g &#8216;zookeeper&#8217;, &#8216;web-server&#8217;, etc.)</li>
+<li><strong>port</strong> (<em>int</em>) &#8211; TCP port to remap</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">a comma separated connection string</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Cluster.index">
+<code class="descname">index</code><em class="property"> = 0</em><a class="headerlink" href="#api.Cluster.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pod index within the cluster (starts at 0). This index is relative to the current cluster and will change
+across future configurations should pods be added or removed (do not use it if you need an index that is
+guarantee to remain the same during the pod&#8217;s lifetime). Values are always consecutive (0, 1, 2...).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Cluster.key">
+<code class="descname">key</code><em class="property"> = ''</em><a class="headerlink" href="#api.Cluster.key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Internal identifier for the pod being configured. Use pods[key] if you want your settings.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Cluster.pods">
+<code class="descname">pods</code><em class="property"> = {}</em><a class="headerlink" href="#api.Cluster.pods" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pod summary describing the cluster, as a dict.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Cluster.seq">
+<code class="descname">seq</code><em class="property"> = 0</em><a class="headerlink" href="#api.Cluster.seq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Monotonic counter allocated to each pod once and guaranteed unique within the cluster over time. This value
+is not necessarily spanning a continuous interval but is truly unique and can be used in situations where
+you need an index that will never change during the pod&#8217;s lifetime.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Cluster.size">
+<code class="descname">size</code><em class="property"> = 0</em><a class="headerlink" href="#api.Cluster.size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Total number of pods in the cluster (e.g len(pods)).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="api.LifeCycle">
+<em class="property">class </em><code class="descclassname">api.</code><code class="descname">LifeCycle</code><a class="headerlink" href="#api.LifeCycle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract class defining what your pod does. This is where you implement the configuration logic. You can also
+define several other operations such as the pod initialization or finalization.</p>
+<dl class="method">
+<dt id="api.LifeCycle.can_configure">
+<code class="descname">can_configure</code><span class="sig-paren">(</span><em>cluster</em><span class="sig-paren">)</span><a class="headerlink" href="#api.LifeCycle.can_configure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional callback invoked before configuration. Throwing an exception in here will gracefully prevent
+the configuration from happening (at which point the leader will re-schedule it after the damper period
+expires).</p>
+<p>This can be used to check that all dependencies are there (for instance if you require a specific amount of
+nodes). You can also use it to check on other dynamic factors that may influence the configuration process.</p>
+<p>The cluster information passed to you will contain any registered pod, including the ones that may be tagged
+as dead.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cluster</strong> (<a class="reference internal" href="#api.Cluster" title="api.Cluster"><code class="xref py py-class docutils literal"><span class="pre">Cluster</span></code></a>) &#8211; the current cluster topology</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.LifeCycle.configure">
+<code class="descname">configure</code><span class="sig-paren">(</span><em>cluster</em><span class="sig-paren">)</span><a class="headerlink" href="#api.LifeCycle.configure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mandatory callback invoked at configuration time. This is where you define what needs to be run by the pod.
+The method must return a 2-uple formed by an invocation line defining what needs to be executed and a
+dict containing environment variable overrides.</p>
+<p>The cluster information passed to you will only contain any registered pod that is not tagged as dead.</p>
+<p>Any environment variable passed to the pod will be also passed down to the underlying process. Any additional
+key/value pair specified in the output dict will be passed as well (e.g you can override variables
+specified at the framework level).</p>
+<p>Once the process is started it will be monitored on a regular basis. Any successful exit (0) will shutdown
+the pod and let it idle until the container is physically destroyed. Any error (exit code between 1 and 254)
+will trigger an automatic process re-start.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">throwing an exception in here will cause the pod to shutdown right away.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cluster</strong> (<a class="reference internal" href="#api.Cluster" title="api.Cluster"><code class="xref py py-class docutils literal"><span class="pre">Cluster</span></code></a>) &#8211; the current cluster topology</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">a (string, dict) 2-uple</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.LifeCycle.finalize">
+<code class="descname">finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.LifeCycle.finalize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional callback invoked last whenever the pod is shutting down. You can use it to perform cleanup tasks
+(for instance to free-up resources you may have provisioned for the pod, typically some EBS volume).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.LifeCycle.initialize">
+<code class="descname">initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.LifeCycle.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional callback invoked at the very first configuration. This can typically be used to implement once-only
+setup operations such as mounting a EBS volume for instance.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">throwing an exception in here will cause the pod to shutdown.</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.LifeCycle.sanity_check">
+<code class="descname">sanity_check</code><span class="sig-paren">(</span><em>process</em><span class="sig-paren">)</span><a class="headerlink" href="#api.LifeCycle.sanity_check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional callback invoked at regular interval to check on the underlying process run by the pod. Any exception
+thrown in here will mean that the process should be torn down and restarted. You can typically use this
+mechanism to implement fined-grained control on how your process is behaving (for instance by gathering metrics
+or by querying some REST API).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>process</strong> (<code class="xref py py-class docutils literal"><span class="pre">subprocess.Popen</span></code>) &#8211; the underlying process run by the pod</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.LifeCycle.tear_down">
+<code class="descname">tear_down</code><span class="sig-paren">(</span><em>process</em><span class="sig-paren">)</span><a class="headerlink" href="#api.LifeCycle.tear_down" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional callback invoked when the pod needs to tear down the underlying process. The default implementation
+is to send a SIGTERM. You can use this mechanism to implement sophisticated shutdown strategies.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>process</strong> (<code class="xref py py-class docutils literal"><span class="pre">subprocess.Popen</span></code>) &#8211; the underlying process run by the pod</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="api.Reactive">
+<em class="property">class </em><code class="descclassname">api.</code><code class="descname">Reactive</code><a class="headerlink" href="#api.Reactive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of <a class="reference internal" href="#api.Model" title="api.Model"><code class="xref py py-class docutils literal"><span class="pre">Model</span></code></a> defining reactive clustering. This means the leader pod will be notified
+whenever any peer either joins or leaves the cluster at which point it will trigger a re-configuration. To import
+its actor implementation do something like:</p>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">ochopod.models.reactive</span> <span class="kn">import</span> <span class="n">Actor</span> <span class="k">as</span> <span class="n">Reactive</span>
+</pre></div>
+</div>
+<dl class="attribute">
+<dt id="api.Reactive.damper">
+<code class="descname">damper</code><em class="property"> = 0.0</em><a class="headerlink" href="#api.Reactive.damper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Damper in seconds, e.g how long does the leader pod waits after spotting changes and before configuring.
+It is <em>strongly</em> advised to set it to something reasonable (30 seconds ?) whenever forming clusters.
+Be aware that any sudden drop of connectivity to zookeeper is considered a change, meaning that a small
+damper might trigger useless re-configurations. On the other hand a large damper may turned out to be
+impractical.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Reactive.depends_on">
+<code class="descname">depends_on</code><em class="property"> = []</em><a class="headerlink" href="#api.Reactive.depends_on" title="Permalink to this definition">¶</a></dt>
+<dd><p>Array listing what clusters we depend on (e.g &#8216;zookeeper&#8217; for instance). Those clusters <em>must</em> be registered
+in the same namespace. A re-configuration will be triggered if any dependency changes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Reactive.full_shutdown">
+<code class="descname">full_shutdown</code><em class="property"> = False</em><a class="headerlink" href="#api.Reactive.full_shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>If true the leader will first turn off all pods before configuring them.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Reactive.grace">
+<code class="descname">grace</code><em class="property"> = 60.0</em><a class="headerlink" href="#api.Reactive.grace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Timeout in seconds when issuing control requests to a pod. This can be changed for instance when dealing
+with pods that are known to configure slowly.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Reactive.sequential">
+<code class="descname">sequential</code><em class="property"> = False</em><a class="headerlink" href="#api.Reactive.sequential" title="Permalink to this definition">¶</a></dt>
+<dd><p>If true the leader will fire its control requests to the pods one after the other. Otherwise all the
+pods will be sent requests in parallel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="api.Piped">
+<em class="property">class </em><code class="descclassname">api.</code><code class="descname">Piped</code><a class="headerlink" href="#api.Piped" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of <a class="reference internal" href="#api.LifeCycle" title="api.LifeCycle"><code class="xref py py-class docutils literal"><span class="pre">LifeCycle</span></code></a> defining a pod that will configure and manage an underlying sub-process.
+You <strong>must</strong> specialize this class in your pod script to at least provide the <a class="reference internal" href="#api.LifeCycle.configure" title="api.LifeCycle.configure"><code class="xref py py-meth docutils literal"><span class="pre">LifeCycle.configure()</span></code></a>
+callback. To import its actor implementation do something like:</p>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">ochopod.models.piped</span> <span class="kn">import</span> <span class="n">Actor</span> <span class="k">as</span> <span class="n">Piped</span>
+</pre></div>
+</div>
+<dl class="attribute">
+<dt id="api.Piped.checks">
+<code class="descname">checks</code><em class="property"> = 1</em><a class="headerlink" href="#api.Piped.checks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of (optional) sanity checks we can afford to fail before.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Piped.cwd">
+<code class="descname">cwd</code><em class="property"> = None</em><a class="headerlink" href="#api.Piped.cwd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional working directory to explicitly enforce when running the sub-process. If not defined the
+sub-process will be run the current directory, wherever that may be (usually / if you are running your
+pod script from an init service).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Piped.grace">
+<code class="descname">grace</code><em class="property"> = 60.0</em><a class="headerlink" href="#api.Piped.grace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Grace period in seconds, e.g how long does the pod wait before forcefully killing its sub-process (SIGKILL).
+The termination is done by default with a SIGTERM (but can be overwritten using <a class="reference internal" href="#api.LifeCycle.tear_down" title="api.LifeCycle.tear_down"><code class="xref py py-meth docutils literal"><span class="pre">LifeCycle.tear_down()</span></code></a>).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Piped.shell">
+<code class="descname">shell</code><em class="property"> = False</em><a class="headerlink" href="#api.Piped.shell" title="Permalink to this definition">¶</a></dt>
+<dd><p>If true the sub-process will interpret its command line as a shell command (e.g you can use pipes for instance).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Piped.strict">
+<code class="descname">strict</code><em class="property"> = False</em><a class="headerlink" href="#api.Piped.strict" title="Permalink to this definition">¶</a></dt>
+<dd><p>If true the pod will always configure itself whenever requested by the leader. If false it will only do so
+either upon the first leader request (e.g when it joins the cluster) or if its dependencies change. This
+mechanism ensures we don&#8217;t restart the underlying sub-process for no reason, typically when scaling the
+cluster capacity up or down.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="bindings">
+<h2>Bindings<a class="headerlink" href="#bindings" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="bindings.ec2.api.EC2Marathon">
+<em class="property">class </em><code class="descclassname">bindings.ec2.api.</code><code class="descname">EC2Marathon</code><a class="headerlink" href="#bindings.ec2.api.EC2Marathon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mesosphere/Marathon framework binding for pods running on AWS/EC2, providing some basic environment variable
+translation (especially the port mappings). We run a Flask micro-server to handle leader or CLI requests. The
+pod IP addresses are retrieved via the EC2 instance metadata.</p>
+<p>You <strong>must</strong> run this on a EC2 instance with Apache Mesos installed unless you use the local mode in which case
+everything will be assumed to run on localhost (include Zookeeper). You also <strong>must</strong> mount /etc/mesos onto the
+container (preferably in read-only mode).</p>
+<p>The pod requires configuration settings from the environment variables. All settings are simple key/value
+pairs prefixed by <em>ochopod</em>. These are optional settings you may specify (e.g you can set them in your application
+configuration):</p>
+<blockquote>
+<div><ul class="simple">
+<li><em>ochopod_cluster</em>: identifier for the cluster to run this pod under (e.g &#8220;database&#8221; or &#8220;web-server&#8221;
+for instance, defaulted to the Marathon application identifier if not specified).</li>
+<li><em>ochopod_debug</em>: turns debug logging on if set to &#8220;true&#8221;.</li>
+<li><em>ochopod_namespace</em>: namespace as dot separated tokens (e.g &#8220;my-app.staging&#8221;), defaulted to &#8220;marathon&#8221;.</li>
+<li><em>ochopod_port</em>: pod control port on which we listen for HTTP requests, defaulted to 8080.</li>
+</ul>
+</div></blockquote>
+<p>The following payload is registered by the pod at boot time:</p>
+<blockquote>
+<div><ul class="simple">
+<li><strong>cluster</strong>: the pod cluster</li>
+<li><strong>namespace</strong>: the pod namespace</li>
+<li><strong>binding</strong>: set to <em>marathon</em></li>
+<li><strong>ports</strong>: port remapping, as a dict</li>
+<li><strong>port</strong>: local control port</li>
+<li><strong>debug</strong>: true if debug logging is on</li>
+<li><strong>application</strong>: Marathon application identifier</li>
+<li><strong>task</strong>: Mesos task identifier</li>
+<li><strong>seq</strong>: unique pod index within the cluster</li>
+<li><strong>node</strong>: EC2 instance id of the underlying node running the container.</li>
+<li><strong>ip</strong>: EC2 instance local IPv4.</li>
+<li><strong>public</strong>: externally reachable EC2 instance IPv4 (used for the CLI or 3rd party integrations).</li>
+<li><strong>zk</strong>: connection string for our Zookeeper ensemble (looked up from /etc/mesos/zk).</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/autodesk-logo.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">API</a><ul>
+<li><a class="reference internal" href="#module-ochopod">General</a></li>
+<li><a class="reference internal" href="#module-api">Data model</a></li>
+<li><a class="reference internal" href="#bindings">Bindings</a></li>
+</ul>
+</li>
+</ul>
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="concepts.html" title="previous chapter">Concepts</a></li>
+      <li>Next: <a href="tools.html" title="next chapter">Tools &amp; Automation</a></li>
+  </ul></li>
+</ul>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  <div class="footer">
+    &copy; Copyright 2015, Autodesk.
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  
+  </body>
+</html>
