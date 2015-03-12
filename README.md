@@ -13,8 +13,8 @@ command line tools you can use to automate operations around your containers !
 
 ### Documentation
 
-You can [**peruse our online documentation**](https://git.autodesk.com/pages/cloudplatform-compute/ochopod/)
-for examples, design notes, API docs and more !
+You can [**peruse our online documentation**](http://autodesk-cloud.github.io/ochopod/) for examples, design notes,
+API docs and more !
 
 The [**Sphinx**](http://sphinx-doc.org/) materials can be found under docs/. Just go in there and build for your
 favorite target, for instance:
