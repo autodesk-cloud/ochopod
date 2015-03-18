@@ -53,12 +53,9 @@ class Pod(EC2Marathon):
 
         #
         # - start logging to /var/log/ochopod.log
-        # - kick-start our werkzeug micro-server
         #
         logger.info('EC2 marathon bindings started')
         web = Flask(__name__)
-        coordinator = None
-        executor = None
 
         #
         # - default presets in case we run outside of marathon (local vm testing)
@@ -276,32 +273,42 @@ class Pod(EC2Marathon):
                 request.environ.get('werkzeug.server.shutdown')()
                 return '{}', 200
 
-            #
-            # - run werkzeug from its own thread to avoid blocking
-            # - when the main thread is interrupted we'll post a request to ourselves and ask for shutdown
-            #
-            class Runner(threading.Thread):
+            class _Runner(threading.Thread):
+                """
+                Run werkzeug from a separate thread to avoid blocking the main one. We'll have to shut it down
+                using a dedicated HTTP POST.
+                """
 
                 def run(self):
-                    port = int(hints['port'])
-                    logger.debug('running werkzeug @ port %d' % port)
-                    web.run(host='0.0.0.0', port=port, threaded=True)
+                    web.run(host='0.0.0.0', port=int(hints['port']), threaded=True)
 
-            Runner().start()
+            try:
 
-            #
-            # - block on the lifecycle actor until it goes down (usually after a /control/kill request)
-            #
-            spin_lock(latch)
-            logger.debug('pod is dead, idling')
+                #
+                # - block on the lifecycle actor until it goes down (usually after a /control/kill request)
+                #
+                _Runner().start()
+                spin_lock(latch)
+                logger.debug('pod is dead, idling')
 
-            #
-            # - simply idle forever (since the framework would restart any container that terminates)
-            # - /log and /hints HTTP requests will succeed (and show the pod as being killed)
-            # - any control request will now fail
-            #
-            while 1:
-                time.sleep(60.0)
+                #
+                # - simply idle forever (since the framework would restart any container that terminates)
+                # - /log and /hints HTTP requests will succeed (and show the pod as being killed)
+                # - any control request will now fail
+                #
+                while 1:
+                    time.sleep(60.0)
+
+            finally:
+
+                #
+                # - when we exit the block first shutdown our executor (which may probably be already down)
+                # - then shutdown the coordinator to un-register from zookeeper
+                # - finally ask werkzeug to shutdown via a REST call
+                #
+                shutdown(executor)
+                shutdown(coordinator)
+                post('http://127.0.0.1:%s/terminate' % env['ochopod_port'])
 
         except KeyboardInterrupt:
 
@@ -310,19 +317,3 @@ class Pod(EC2Marathon):
         except Exception as failure:
 
             logger.fatal('unexpected condition -> %s' % diagnostic(failure))
-
-        finally:
-
-            #
-            # - first shutdown our executor (which may probably be already down)
-            # - then shutdown the coordinator to un-register from zookeeper
-            # - finally ask werkzeug to shutdown
-            # - this has to be done via a REST call to ourselves (unfortunately)
-            #
-            try:
-                shutdown(executor)
-                shutdown(coordinator)
-                post('http://127.0.0.1:%s/terminate' % env['ochopod_port'])
-
-            except ConnectionError:
-                pass

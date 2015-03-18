@@ -25,7 +25,7 @@ from pykka.exceptions import ActorDeadError
 from threading import Event, Thread
 
 #: our pycse logger
-logger = logging.getLogger('pycse')
+logger = logging.getLogger('ochopod')
 
 
 def spin_lock(latch, strict=1, spin=0.5):
