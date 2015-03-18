@@ -57,10 +57,24 @@
             
   <div class="section" id="faq">
 <h1>FAQ<a class="headerlink" href="#faq" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="how-does-ochopod-differ-from-docker-swarm-or-compose">
+<h2>How does Ochopod differ from Docker Swarm or Compose ?<a class="headerlink" href="#how-does-ochopod-differ-from-docker-swarm-or-compose" title="Permalink to this headline">¶</a></h2>
+<p>Ochopod goes beyond Swarm and Compose. For one thing we rely on <a class="reference external" href="http://mesos.apache.org/">Mesos</a> for resourcing and provisioning containers on a
+fleet of hosts (containers which may or may not be <a class="reference external" href="https://www.docker.com/">Docker</a> based by the way). We also do not rely on container
+specific features such as links and allow for more generic clustering (e.g your containers will connect to other
+containers running - possibly on remote hosts - using their remapped ports). Ochopod also provides lookup and directory
+capabilities on its own.</p>
+<p>Now the big functional difference is that you can express all your clustering logic in <a class="reference external" href="https://www.python.org/">Python</a> and go as crazy (or
+minimalist) as you want. This is how we let you for instance cluster a containerized <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> ensemble over multiple
+hosts.</p>
+<p>So in a nutshell we provide the same general feature set except you can customize how you need to cluster things
+together and swap out parts of the underlying technology stack (resourcing framework, container engine and so on) to
+suit your needs.</p>
+</div>
 <div class="section" id="is-ochopod-bound-to-docker">
 <h2>Is Ochopod bound to Docker ?<a class="headerlink" href="#is-ochopod-bound-to-docker" title="Permalink to this headline">¶</a></h2>
-<p>No it&#8217;s not. The containerization technology used to run Ochopod does not really matter. Now you have to be aware
-that you may have to play with specific constraints, especially around resource quotas (cpu, memory).</p>
+<p>No it&#8217;s not. The containerization technology used to run Ochopod does not really matter. You could run Ochopod using
+a <a class="reference external" href="https://github.com/coreos/rocket">Rocket</a> platform for instance.</p>
 </div>
 <div class="section" id="how-do-i-get-ochopod-in-my-containers">
 <h2>How do I get Ochopod in my containers ?<a class="headerlink" href="#how-do-i-get-ochopod-in-my-containers" title="Permalink to this headline">¶</a></h2>
@@ -107,6 +121,7 @@ cluster up by physically adding new slaves. This is however not linked to Ochopo
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">FAQ</a><ul>
+<li><a class="reference internal" href="#how-does-ochopod-differ-from-docker-swarm-or-compose">How does Ochopod differ from Docker Swarm or Compose ?</a></li>
 <li><a class="reference internal" href="#is-ochopod-bound-to-docker">Is Ochopod bound to Docker ?</a></li>
 <li><a class="reference internal" href="#how-do-i-get-ochopod-in-my-containers">How do I get Ochopod in my containers ?</a></li>
 <li><a class="reference internal" href="#do-i-need-mesos-to-take-advantage-of-ochopod">Do I need Mesos to take advantage of Ochopod ?</a></li>
