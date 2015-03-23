@@ -139,11 +139,14 @@ class Cluster(object):
     #: Total number of pods in the cluster (e.g len(pods)).
     size = 0
 
-    def grep(self, dependency, port):
+    def grep(self, dependency, port, public=False):
         """
         Ancillary helper to look a dependency up by name and return a comma separated connection string. The specified
         connection port is automatically remapped to what the underlying framework allocated. The dependency
         is always assumed to be located in the same namespace.
+
+        Each token within the connection string is laid out as the IP address followed by ':' and a port number. By
+        default this method will return internal IP addresses.
 
         .. warning:: the dependency must be valid otherwise an assert will be raised.
         .. code-block:: python
@@ -152,9 +155,11 @@ class Cluster(object):
 
         :type dependency: string
         :type port: int
+        :type public: bool
         :param dependency: dependency cluster identifier (e.g 'zookeeper', 'web-server', etc.)
         :param port: TCP port to remap
-        :rtype: a comma separated connection string
+        :param public: if true the method will return public IP addresses
+        :rtype: str
         """
         pass
 

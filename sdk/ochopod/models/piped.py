@@ -50,12 +50,13 @@ class _Cluster(Cluster):
         self.seq = self.pods[self.key]['seq']
         self.size = len(self.pods)
 
-    def grep(self, dependency, port):
+    def grep(self, dependency, port, public=False):
         out = []
         nodes = self.dependencies[dependency]
         for node in nodes.values():
+            ip = node['public' if public else 'ip']
             assert str(port) in node['ports'], 'pod from %s not exposing port %d ?' % (dependency, port)
-            out.append('%s:%d' % (node['ip'], node['ports'][str(port)]))
+            out.append('%s:%d' % (ip, node['ports'][str(port)]))
         return ','.join(out)
 
 
