@@ -17,6 +17,7 @@
 import fnmatch
 import json
 import logging
+import os
 import pykka
 import requests
 import time
@@ -92,6 +93,10 @@ def fire(zk, cluster, command, subset=None, timeout=10.0):
     port will be looked up & remapped automatically. The outcome is a dict keying a compound identifier (cluster + pod
     sequence index) to a 2-uple (the pod response and the corresponding HTTP code).
 
+    By default the external IP address is used to reach the pods. This can be reverted so that the internal IP is
+    used by setting the $OCHOPOD_USE_INTERNAL_IPS environment variable (typically to run tools from within the
+    cluster).
+
     :type zk: :class:`kazoo.client.KazooClient`
     :type cluster: str
     :type command: str
@@ -118,14 +123,17 @@ def fire(zk, cluster, command, subset=None, timeout=10.0):
             self.body = None
             self.code = None
 
+            self.start()
+
         def run(self):
 
             url = 'n/a'
+            public = 'OCHOPOD_USE_INTERNAL_IPS' not in os.environ
             try:
                 ts = time.time()
                 port = self.hints['port']
                 assert port in self.hints['ports'], 'ochopod control port not exposed @ %s (user error ?)' % self.key
-                url = 'http://%s:%d/%s' % (self.hints['public'], self.hints['ports'][port], command)
+                url = 'http://%s:%d/%s' % (self.hints['public' if public else 'ip'], self.hints['ports'][port], command)
                 reply = requests.post(url, timeout=timeout)
                 self.body = reply.json()
                 self.code = reply.status_code
@@ -147,13 +155,8 @@ def fire(zk, cluster, command, subset=None, timeout=10.0):
     # - lookup our pods based on the cluster(s) we want
     # - fire a thread for each
     #
-    threads = []
     pods = lookup(zk, cluster, subset=subset)
-    for pod, hints in pods.items():
-        thread = _Post(pod, hints)
-        threads.append(thread)
-        thread.start()
-
+    threads = [_Post(pod, hints) for pod, hints in pods.items()]
     out = [thread.join() for thread in threads]
     return {key: (seq, body, code) for (key, seq, body, code) in out if code}
 
@@ -204,7 +207,7 @@ class ZK(FSM):
         self.brokers = brokers
         self.data = data
         self.pending = deque()
-        self.path = 'zk proxy'
+        self.path = 'zookeeper proxy'
 
     def feedback(self, state):
 
