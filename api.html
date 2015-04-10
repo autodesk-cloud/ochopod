@@ -180,10 +180,12 @@ will not be reflected accurately.</p>
 
 <dl class="method">
 <dt id="api.Cluster.grep">
-<code class="descname">grep</code><span class="sig-paren">(</span><em>dependency</em>, <em>port</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Cluster.grep" title="Permalink to this definition">¶</a></dt>
+<code class="descname">grep</code><span class="sig-paren">(</span><em>dependency</em>, <em>port</em>, <em>public=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Cluster.grep" title="Permalink to this definition">¶</a></dt>
 <dd><p>Ancillary helper to look a dependency up by name and return a comma separated connection string. The specified
 connection port is automatically remapped to what the underlying framework allocated. The dependency
 is always assumed to be located in the same namespace.</p>
+<p>Each token within the connection string is laid out as the IP address followed by &#8216;:&#8217; and a port number. By
+default this method will return internal IP addresses.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">the dependency must be valid otherwise an assert will be raised.</p>
@@ -198,10 +200,11 @@ is always assumed to be located in the same namespace.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>dependency</strong> (<em>string</em>) &#8211; dependency cluster identifier (e.g &#8216;zookeeper&#8217;, &#8216;web-server&#8217;, etc.)</li>
 <li><strong>port</strong> (<em>int</em>) &#8211; TCP port to remap</li>
+<li><strong>public</strong> (<em>bool</em>) &#8211; if true the method will return public IP addresses</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">a comma separated connection string</p>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">str</p>
 </td>
 </tr>
 </tbody>
@@ -328,6 +331,31 @@ or by querying some REST API).</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>process</strong> (<code class="xref py py-class docutils literal"><span class="pre">subprocess.Popen</span></code>) &#8211; the underlying process run by the pod</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.LifeCycle.signaled">
+<code class="descname">signaled</code><span class="sig-paren">(</span><em>js</em>, <em>process</em><span class="sig-paren">)</span><a class="headerlink" href="#api.LifeCycle.signaled" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional callback invoked upon a user /control/signal HTTP request is sent to the pod. This is meant to be a
+placeholder for situations where one needs to perform out-of-band operations on a pod. Any exception raised
+in this method will result in a HTTP 500 being returned to the caller. Please note you can return arbitrary
+json content as well (handy when building monitoring or deployment tools).</p>
+<p>..warning:: it is not advised to terminate the underlying process in this method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>js</strong> (<em>dict</em>) &#8211; optional json payload passed via the HTTP request, can be anything</li>
+<li><strong>process</strong> &#8211; the underlying process run by the pod or None if off</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">a dict that will be serialized back to the caller as utf-8 json or None</p>
+</td>
 </tr>
 </tbody>
 </table>

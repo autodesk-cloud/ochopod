@@ -204,6 +204,7 @@ already been killed and is now idling. Soft failures will trigger a <strong>HTTP
 <li><strong>POST /control/off</strong>: gracefully terminates the sub-process.</li>
 <li><strong>POST /control/check</strong>: runs a configuration pre-check.</li>
 <li><strong>POST /control/kill</strong>: turns the pod off which then switches into idling.</li>
+<li><strong>POST /control/signal</strong>: triggers custom user logic.</li>
 </ul>
 </div></blockquote>
 <p>The <strong>POST /info</strong> request is meant to provide dynamic information about the pod, typically for 3rd party tools
@@ -227,6 +228,9 @@ For instance:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>The <strong>POST /control/signal</strong> request is a generic placeholder for out-the-band logic. Take for instance the case where
+you need to switch your web-tier into a special mode or maybe update your load-balancer configuration on the fly. This
+can be neatly packaged in your pod script and activated using a single HTTP request.</p>
 </div>
 <div class="section" id="the-state-machine">
 <h3>The state-machine<a class="headerlink" href="#the-state-machine" title="Permalink to this headline">¶</a></h3>
@@ -236,7 +240,8 @@ it exits on a non zero code. Any further configuration request will first gracef
 re-forking it.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">You can define custom logic to handle the sub-process health-check and tear down.</p>
+<p class="last">You can also define custom logic to handle the sub-process health-check and tear down. The default tear down is
+implemented by sending a SIGTERM and waiting for the sub-process to terminate (for up to a minute).</p>
 </div>
 <p>Upon fatal failures the pod will gracefully slip into a dead state but will still be reachable (for instance to grab
 its logs). Additional requests are also supported to manually restart the sub-process or turn it on/off. During

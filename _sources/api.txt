@@ -15,7 +15,7 @@ __________
 .. autoclass:: Cluster
    :members: dependencies, index, key, pods, seq, size, grep
 .. autoclass:: LifeCycle
-   :members: initialize, can_configure, configure, sanity_check, tear_down, finalize
+   :members: initialize, can_configure, configure, sanity_check, tear_down, signaled, finalize
 .. autoclass:: Reactive
    :members: damper, depends_on, full_shutdown, grace, sequential
 .. autoclass:: Piped
