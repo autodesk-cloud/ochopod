@@ -160,6 +160,7 @@ Each pod can receive the following HTTP requests:
  - **POST /control/off**: gracefully terminates the sub-process.
  - **POST /control/check**: runs a configuration pre-check.
  - **POST /control/kill**: turns the pod off which then switches into idling.
+ - **POST /control/signal**: triggers custom user logic.
 
 The **POST /info** request is meant to provide dynamic information about the pod, typically for 3rd party tools
 to check whether it is idling or not for instance. The request returns a subset of the settings stored in Zookeeper_
@@ -184,6 +185,11 @@ For instance:
         "port": "8080"
     }
 
+
+The **POST /control/signal** request is a generic placeholder for out-the-band logic. Take for instance the case where
+you need to switch your web-tier into a special mode or maybe update your load-balancer configuration on the fly. This
+can be neatly packaged in your pod script and activated using a single HTTP request.
+
 The state-machine
 *****************
 
@@ -193,7 +199,8 @@ it exits on a non zero code. Any further configuration request will first gracef
 re-forking it.
 
 .. note::
-   You can define custom logic to handle the sub-process health-check and tear down.
+   You can also define custom logic to handle the sub-process health-check and tear down. The default tear down is
+   implemented by sending a SIGTERM and waiting for the sub-process to terminate (for up to a minute).
 
 Upon fatal failures the pod will gracefully slip into a dead state but will still be reachable (for instance to grab
 its logs). Additional requests are also supported to manually restart the sub-process or turn it on/off. During

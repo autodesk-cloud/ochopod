@@ -32,7 +32,6 @@ from pykka import ThreadingFuture
 from pykka.exceptions import Timeout, ActorDeadError
 from flask import Flask, request
 from requests import post
-from requests.exceptions import ConnectionError
 
 #: Our ochopod logger.
 logger = logging.getLogger('ochopod')
@@ -242,10 +241,10 @@ class Pod(EC2Marathon):
                     logger.debug('http in -> /control/%s' % task)
                     latch = ThreadingFuture()
                     executor.tell({'request': task, 'latch': latch, 'data': request.data})
-                    code = latch.get(timeout=int(timeout))
+                    js, code = latch.get(timeout=int(timeout))
                     ms = time.time() - ts
                     logger.debug('http out -> HTTP %s (%d ms)' % (code, ms))
-                    return '{}', code
+                    return json.dumps(js), code
 
                 except Timeout:
 

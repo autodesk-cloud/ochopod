@@ -242,6 +242,23 @@ class LifeCycle(object):
         """
         pass
 
+    def signaled(self, js, process):
+        """
+        Optional callback invoked upon a user /control/signal HTTP request is sent to the pod. This is meant to be a
+        placeholder for situations where one needs to perform out-of-band operations on a pod. Any exception raised
+        in this method will result in a HTTP 500 being returned to the caller. Please note you can return arbitrary
+        json content as well (handy when building monitoring or deployment tools).
+
+        ..warning:: it is not advised to terminate the underlying process in this method.
+
+        :type js: dict
+        :type forked: :class:`subprocess.Popen`
+        :param js: optional json payload passed via the HTTP request, can be anything
+        :param process: the underlying process run by the pod or None if off
+        :rtype: a dict that will be serialized back to the caller as utf-8 json or None
+        """
+        pass
+
     def finalize(self):
         """
         Optional callback invoked last whenever the pod is shutting down. You can use it to perform cleanup tasks

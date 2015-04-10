@@ -51,6 +51,10 @@ class _Cluster(Cluster):
         self.size = len(self.pods)
 
     def grep(self, dependency, port, public=False):
+
+        if not dependency in self.dependencies:
+            return ''
+
         out = []
         nodes = self.dependencies[dependency]
         for node in nodes.values():
@@ -270,8 +274,9 @@ class Actor(FSM, Piped):
             # - the process is already running, fail gracefully on a 200
             # - this is the code-path used for instance up a leader request when strict is false
             #
+            reply = {}, 200
             logger.debug('%s : skipping /control/on request' % self.path)
-            data.latch.set(200)
+            data.latch.set(reply)
 
         else:
 
@@ -322,8 +327,9 @@ class Actor(FSM, Piped):
                     unrolled = '\n'.join(['\t%s -> %s' % (k, v) for k, v in data.env.items()])
                     logger.debug('%s : extra environment for pid %s ->\n%s' % (self.path, data.forked.pid, unrolled))
 
+                reply = {}, 200
                 data.next_sanity_check = now + SANITY
-                data.latch.set(200)
+                data.latch.set(reply)
 
             except Exception as failure:
 
@@ -331,9 +337,10 @@ class Actor(FSM, Piped):
                 # - any failure trapped during the configuration -> HTTP 406
                 # - the pod will shutdown automatically as well
                 #
+                reply = {}, 406
                 logger.warning('%s : failed to configure -> %s, shutting down' % (self.path, diagnostic(failure)))
                 self._request(['kill'])
-                data.latch.set(406)
+                data.latch.set(reply)
 
         self.commands.popleft()
         return 'spin', data, 0
@@ -345,17 +352,19 @@ class Actor(FSM, Piped):
             # - simply invoke the user-defined readiness check (typically to allow making sure all
             #   the required dependencies are available before starting anything)
             #
+            reply = {}, 200
             cluster = _Cluster(data.js)
             self.can_configure(cluster)
-            data.latch.set(200)
+            data.latch.set(reply)
 
         except Exception as failure:
 
             #
             # - any failure trapped during the configuration -> HTTP 406
             #
+            reply = {}, 406
             logger.warning('%s : failed to run pre-check -> %s' % (self.path, diagnostic(failure)))
-            data.latch.set(406)
+            data.latch.set(reply)
 
         self.commands.popleft()
         return 'spin', data, 0
@@ -369,7 +378,8 @@ class Actor(FSM, Piped):
         if data.forked:
             raise Aborted('resetting to terminate pid %s' % data.forked.pid)
 
-        data.latch.set(200)
+        reply={}, 200
+        data.latch.set(reply)
         self.commands.popleft()
         return 'spin', data, 0
 
@@ -400,9 +410,29 @@ class Actor(FSM, Piped):
         #
         # - in any case request a termination and tag the pod as 'dead'
         #
+        reply = {}, 200
         self.terminate = 1
         self.hints['process'] = 'dead'
-        data.latch.set(200)
+        data.latch.set(reply)
+        self.commands.popleft()
+        return 'spin', data, 0
+
+    def signal(self, data):
+
+        try:
+            logger.debug('%s : user signal received' % self.path)
+            js = self.signaled(data.js, process=data.forked)
+            reply = js if js else {}, 200
+
+        except Exception as failure:
+
+            #
+            # - abort on a 500 upon any failure
+            #
+            reply = {}, 500
+            logger.warning('%s : failed to signal -> %s' % (self.path, diagnostic(failure)))
+
+        data.latch.set(reply)
         self.commands.popleft()
         return 'spin', data, 0
 
@@ -410,7 +440,7 @@ class Actor(FSM, Piped):
 
         assert 'request' in msg, 'bogus message received ?'
         req = msg['request']
-        if req in ['on', 'check', 'off', 'kill']:
+        if req in ['on', 'check', 'off', 'kill', 'signal']:
 
             #
             # - we got a request from the leader or the CLI
