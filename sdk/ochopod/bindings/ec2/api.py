@@ -58,3 +58,7 @@ class EC2Marathon(Binding):
         - **zk**: connection string for our Zookeeper ensemble (looked up from /etc/mesos/zk).
     """
     pass
+
+class EC2Kubernetes(Binding):
+
+    pass

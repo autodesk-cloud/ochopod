@@ -23,7 +23,7 @@ import time
 
 from copy import deepcopy
 from ochopod.api import LifeCycle, Model
-from ochopod.bindings.ec2.api import EC2Marathon
+from ochopod.bindings.ec2.api import EC2Kubernetes
 from ochopod.core.core import Coordinator
 from ochopod.core.fsm import diagnostic, shutdown, spin_lock
 from ochopod.core.utils import shell
@@ -37,9 +37,9 @@ from requests import post
 logger = logging.getLogger('ochopod')
 
 
-class Pod(EC2Marathon):
+class Pod(EC2Kubernetes):
     """
-    Implementation for the :class:`ochopod.bindings.ec2.api.EC2Marathon` interface.
+    Implementation for the :class:`ochopod.bindings.ec2.api.EC2Kubernetes` interface.
     """
 
     def boot(self, lifecycle, model=Reactive, local=0):
@@ -53,26 +53,21 @@ class Pod(EC2Marathon):
         #
         # - start logging to /var/log/ochopod.log
         #
-        logger.info('EC2 marathon bindings started')
+        logger.info('EC2 kubernetes bindings started')
         web = Flask(__name__)
 
         #
         # - default presets in case we run outside of marathon (local vm testing)
         # - any environment variable prefixed with "ochopod." is of interest for us (e.g this is what the user puts
-        #   in the marathon application configuration for instance)
-        # - the other settings come from marathon (namely the port bindings & application/task identifiers)
-        # - the MESOS_TASK_ID is important to keep around to enable task deletion via the marathon REST API
+        #   in the pod configuration yaml/json for instance)
         #
         env = \
             {
                 'ochopod_cluster': '',
-                'ochopod_debug': 'false',
+                'ochopod_debug': 'true',
                 'ochopod_local': 'false',
-                'ochopod_namespace': 'marathon',
-                'ochopod_port': '8080',
-                'MESOS_TASK_ID': '',
-                'MARATHON_APP_ID': '/local',
-                'PORT_8080': '8080'
+                'ochopod_namespace': 'default',
+                'ochopod_port': '8080'
             }
 
         env.update(os.environ)
@@ -80,29 +75,29 @@ class Pod(EC2Marathon):
         try:
 
             #
-            # - grab our environment variables (which are set by the marathon executor)
-            # - extract the port bindings and construct a small remapping dict
+            # - we are (assuming to be) deployed on EC2
+            # - we'll retrieve the underlying metadata using curl
             #
-            ports = {}
+            def _aws(token):
+                code, lines = shell('curl -f http://169.254.169.254/latest/meta-data/%s' % token)
+                assert code is 0, 'unable to lookup EC2 metadata for %s (are you running on EC2 ?)' % token
+                return lines[0]
+
+            #
+            # - curl to the k8s master @ 10.0.0.1 to retrieve info about our cluster
+            # - don't forget to merge the resulting output
+            #
+            def _k8s(token):
+                code, lines = shell('curl -f http://10.0.0.1/api/v1beta3/namespaces/default/%s' % token)
+                assert code is 0, 'unable to look the kubernetes master up (is it running ?)'
+                return json.loads(''.join(lines))
+
+            #
+            # - grab our environment variables
+            # - isolate the ones prefixed with ochopod_
+            #
             logger.debug('environment ->\n%s' % '\n'.join(['\t%s -> %s' % (k, v) for k, v in env.items()]))
-            for key, val in env.items():
-                if key.startswith('PORT_'):
-                    ports[key[5:]] = int(val)
-
-            #
-            # - keep any "ochopod_" environment variable & trim its prefix
-            # - default all our settings, especially the mandatory ones
-            # - the ip and zookeeper are defaulted to localhost to enable easy testing
-            #
             hints = {k[8:]: v for k, v in env.items() if k.startswith('ochopod_')}
-            hints.update(
-                {
-                    'fwk': 'marathon',
-                    'application': env['MARATHON_APP_ID'][1:],
-                    'task': env['MESOS_TASK_ID'],
-                    'ports': ports,
-                })
-
             if local or hints['local'] == 'true':
 
                 #
@@ -120,43 +115,48 @@ class Pod(EC2Marathon):
             else:
 
                 #
-                # - we are (assuming to be) deployed on EC2
-                # - get our underlying metadata using curl
+                # - look our local k8s pod up
+                # - get our pod IP
+                # - extract the port bindings
+                # - keep any "ochopod_" environment variable & trim its prefix
                 #
-                def _peek(token):
-                    code, lines = shell('curl -f http://169.254.169.254/latest/meta-data/%s' % token)
-                    assert code is 0, 'unable to lookup EC2 metadata for %s (are you running on EC2 ?)' % token
-                    return lines[0]
+                cfg = _k8s('pods/%s' % env['HOSTNAME'])
+                hints['ip'] = cfg['status']['podIP']
+
+                ports={}
+                container = cfg['spec']['containers'][0]
+                for binding in container['ports']:
+                    port = binding['containerPort']
+                    ports[str(port)]=port
+
+                hints.update(
+                    {
+                        'fwk': 'k8s',
+                        'ports': ports,
+                    })
 
                 #
-                # - get our local and public IPV4 addresses
-                #
-                hints['ip'] = _peek('local-ipv4')
-                hints['public'] = _peek('public-ipv4')
-
-                #
+                # - get our public IPV4 address
                 # - the "node" will show up as the EC2 instance ID
                 #
-                hints['node'] = _peek('instance-id')
+                hints['public'] = _aws('public-ipv4')
+                hints['node'] = _aws('instance-id')
 
                 #
-                # - the underlying /etc/mesos is assumed to be mounted
-                # - go in there fetch our zookeeper connection string
-                # - warning, the connection string mesos uses is formatted like zk://<ip:port>,..,<ip:port>/mesos
-                # - just keep the ip & port part
+                # - look our k8s "proxy" pod up
+                # - it should be design run our synchronization zookeeper
                 #
-                code, lines = shell("cat /etc/mesos/zk")
-                assert code is 0, 'could not read from /etc/mesos (are you mounting it ?)'
-                hints['zk'] = lines[0][5:].split('/')[0]
+                cfg = _k8s('pods/ocho-proxy')
+                hints['zk'] = cfg['status']['podIP']
 
             #
             # - the cluster must be fully qualified with a namespace (which is defaulted anyway)
-            # - if the cluster is not specified use the marathon application identifier as a fallback
+            # - if the cluster is not specified use the pod identifier as a fallback
             #
             assert hints['namespace'], 'no cluster namespace defined (user error ?)'
             if not hints['cluster']:
-                logger.debug('cluster identifier not defined, falling back on %s' % hints['application'])
-                hints['cluster'] = hints['application']
+                logger.debug('cluster identifier not defined, falling back on %s' % env['HOSTNAME'])
+                hints['cluster'] = env['HOSTNAME']
 
             #
             # - start the life-cycle actor which will pass our hints (as a json object) to its underlying sub-process
@@ -168,7 +168,7 @@ class Pod(EC2Marathon):
             #   the coordinator (especially the pod index which is derived from zookeeper)
             #
             latch = ThreadingFuture()
-            logger.info('starting %s.%s (marathon/ec2) @ %s' % (hints['namespace'], hints['cluster'], hints['node']))
+            logger.info('starting %s.%s (kubernetes/ec2) @ %s' % (hints['namespace'], hints['cluster'], hints['node']))
             breadcrumbs = deepcopy(hints)
             env.update({'ochopod': json.dumps(hints)})
             executor = lifecycle.start(env, latch, hints)
@@ -201,7 +201,6 @@ class Pod(EC2Marathon):
             def _info():
                 keys = \
                     [
-                        'application',
                         'ip',
                         'node',
                         'port',
