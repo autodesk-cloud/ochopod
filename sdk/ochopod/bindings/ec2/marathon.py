@@ -81,7 +81,7 @@ class Pod(EC2Marathon):
 
             #
             # - grab our environment variables (which are set by the marathon executor)
-            # - extract the port bindings and construct a small remapping dict
+            # - extract the mesos PORT_* bindings and construct a small remapping dict
             #
             ports = {}
             logger.debug('environment ->\n%s' % '\n'.join(['\t%s -> %s' % (k, v) for k, v in env.items()]))
@@ -97,7 +97,7 @@ class Pod(EC2Marathon):
             hints = {k[8:]: v for k, v in env.items() if k.startswith('ochopod_')}
             hints.update(
                 {
-                    'fwk': 'marathon',
+                    'fwk': 'mesos+marathon',
                     'application': env['MARATHON_APP_ID'][1:],
                     'task': env['MESOS_TASK_ID'],
                     'ports': ports,
@@ -130,13 +130,10 @@ class Pod(EC2Marathon):
 
                 #
                 # - get our local and public IPV4 addresses
+                # - the "node" will show up as the EC2 instance ID
                 #
                 hints['ip'] = _peek('local-ipv4')
                 hints['public'] = _peek('public-ipv4')
-
-                #
-                # - the "node" will show up as the EC2 instance ID
-                #
                 hints['node'] = _peek('instance-id')
 
                 #
@@ -155,7 +152,7 @@ class Pod(EC2Marathon):
             #
             assert hints['namespace'], 'no cluster namespace defined (user error ?)'
             if not hints['cluster']:
-                logger.debug('cluster identifier not defined, falling back on %s' % hints['application'])
+                logger.debug('cluster identified not defined, falling back on %s' % hints['application'])
                 hints['cluster'] = hints['application']
 
             #

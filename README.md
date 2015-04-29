@@ -3,13 +3,19 @@
 ### Overview
 
 This project is a small [**Python**](https://www.python.org/) package you can use to boot your
-[**Docker**](https://www.docker.com/) containers. It is configured to interface with various
-[**Apache Mesos**](http://mesos.apache.org/) frameworks and coordinates how a given family of containers should
-cluster together at run-time. It transparently manages dependencies and port remapping as well.
+[**Docker**](https://www.docker.com/) containers. It is configured to interface with
+[**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) or various [**Apache Mesos**](http://mesos.apache.org/)
+frameworks and coordinates how a given family of containers should cluster together at run-time. It transparently
+manages dependencies and port remapping as well.
 
-Ochopod uses the [**Apache Zookeeper**](http://zookeeper.apache.org/) ensemble used by Mesos for synchronization
-and data storage, so that you do not have to add yet another piece to the puzzle. The SDK also comes with a set of
-command line tools you can use to automate operations around your containers !
+Ochopod internally relies on [**Apache Zookeeper**](http://zookeeper.apache.org/) for synchronization and metadata
+storage.
+
+### Ochopod + K8S
+
+Please have a look at our [**Ochonetes**](https://github.com/autodesk-cloud/ochonetes) stack and see how we built a
+quick PaaS on top of [**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) including a full toolkit, a
+cool web-shell and more !
 
 ### Documentation
 

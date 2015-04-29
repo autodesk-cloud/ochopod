@@ -18,13 +18,17 @@ asked to get itself in order while having access to a full, consistent view of t
 model is fully automated and just require the user to define the actual configuration logic, typically to render
 a few files on disk.
 
-The stack
-*********
+Overlay
+*******
+
+Ochopod is really an **overlay** that sits on top of a resourcing platform. This overlay hides the internal details
+specific to Mesos_ or Kubernetes_ for instance (typically how pods are identified, where they run, etc) and provides
+some higher-level model.
 
 Ochopod is meant to be used on top of modern resourcing technologies. Our stack is made of three distinct
-layers : a pool of resources (either virtualized or bare-metal), the resourcing layer (Mesos_ plus one or more
-frameworks such as Marathon_ or Aurora_) and finally the application layer on top (e.g Docker_ and whatever runs in
-the containers).
+layers : a pool of resources (either virtualized or bare-metal), the resourcing layer (Kubernetes_ or Mesos_ plus one
+or more frameworks such as Marathon_ or Aurora_) and finally the application layer on top (e.g Docker_ and whatever
+runs in the containers).
 
 .. figure:: png/stack.png
    :align: center
@@ -32,20 +36,20 @@ the containers).
 
 As mentioned above Ochopod runs into containers. From a functional standpoint it acts as a cross between an init and
 a distributed configuration service (e.g Etcd_ or Doozer_). The catch is that Ochopod will rely on the resourcing layer
-to store its state: in other words it will piggy back on the internal Zookeeper_ ensemble used by Mesos_. This allows
-you to run your stuff without having to worry about managing yet another piece.
+to store its state depending on what stack is used.
 
 .. note::
-   There is no strong constraint around what Zookeeper_ ensemble you used. In fact you could point Ochopod to use any
-   ensemble out there. Re-using the Mesos_ infrastructure for synchronization is however very convenient.
+   There is no strong constraint around what Zookeeper_ ensemble is used. For Kubernetes_ we for instance run a
+   dedicated pod running a standalone Zookeeper_. For Marathon_ we simply piggy back on the internal Zookeeper_
+   ensemble used by Mesos_.
 
 Ochopod is completely independent from the resourcing layer underneath. The only relationship between the two is
 the fact the resourcing layer indirectly spawns containers which in turn run Ochopod.
 
 .. note::
    We don't expect any specific resourcing or containerization technology. Ochopod has been developed and tested
-   with a Mesos_, Marathon_, Zookeeper_ and Docker_ stack but could be easily extended to suit more situations, for
-   instance running over Yarn_.
+   with a Kubernetes_ / Mesos_ / Marathon_, Zookeeper_ and Docker_ stack but could be easily extended to suit more
+   situations, for instance running over Yarn_.
 
 Terminology
 ***********
@@ -60,8 +64,8 @@ more such pods. One or more pods running off the same image will form a **cluste
 exposing the same ports).
 
 .. note::
-   Please note a cluster does not necessarily map to one single Marathon_ application for instance. Clusters are
-   orthogonal to the underlying framework data-model.
+   Please note a cluster does not necessarily map to one single Marathon_ application or Kubernetes_ replication
+   controller for instance. Clusters are orthogonal to the underlying framework data-model.
 
 Clusters are your basic lego blocks upon which you build more complex distribute systems. Now since the same resource
 pool may end up running pods sharing a container image in different contexts (consider for instance various deployments
@@ -129,13 +133,12 @@ they expose.
 
 This data is merged from two sources :
 
-1. Environment variables passed by the running framework (Marathon_ in our case). This is also a way for the user to
-   pass settings.
+1. Environment variables passed by the running framework (Marathon_ for instance). This is also a way for the user to
+   pass application settings.
 2. Bindings specific logic, for instance by querying the underlying EC2 instance to grab our current IP.
 
 The important settings are the internal/external IPs used to locate the pod and its port re-mappings (which depend on
-the framework used). This payload stored in Zookeeper_ is used and passed down by the leader when configuring the
-cluster.
+the stack used). This payload stored in Zookeeper_ is used and passed down by the leader when configuring the cluster.
 
 Each pod has a unique identifier (UUID) plus a unique index generated from Zookeeper_. This index is not guaranteed to
 span a continuous interval but is indeed unique within the cluster and throughout the lifetime of the pod.
@@ -172,6 +175,7 @@ For instance:
 
     {
         "node": "i-300345df",
+        "application": "marathon.proxy-2015-03-06-13-40-19",
         "task": "marathon.proxy-2015-03-06-13-40-19.c14e769b-c406-11e4-afa0-e9799",
         "process": "running",
         "ip": "10.181.100.14",
@@ -180,7 +184,6 @@ For instance:
             "8080": 1025,
             "9000": 1026
         },
-        "application": "marathon.proxy-2015-03-06-13-40-19",
         "state": "follower",
         "port": "8080"
     }
@@ -217,8 +220,12 @@ Ochopod does not define any data-model of its own to manage pods, version them, 
 is typically built on top by defining custom tools and taking advantage of each framework capabilities. For instance
 Marathon_ offers enough semantics with its application REST API to implement a simple CI/CD pipeline.
 
+Our pods transport 2 dedicated hints : **application** and **task**. The **application** identifies the high-level
+construct through which the pod was created (for instance a *replication controller* in the Kubernetes_ case). The
+**task** identifies the pod itself in the underlying stack.
+
 .. note::
-   We only offer bindings to run over Marathon_ and EC2 at this point.
+   We only offer bindings to run over Kubernetes_ and Marathon_ over EC2 at this point.
 
 .. _Aurora: http://aurora.incubator.apache.org/
 .. _Chef: http://www.getchef.com/chef/
@@ -226,6 +233,7 @@ Marathon_ offers enough semantics with its application REST API to implement a s
 .. _Doozer: https://github.com/ha/doozer
 .. _Etcd: https://github.com/coreos/etcd
 .. _Flask: http://flask.pocoo.org/
+.. _Kubernetes: https://github.com/GoogleCloudPlatform/kubernetes
 .. _Marathon: https://mesosphere.github.io/marathon/
 .. _Mesos: http://mesos.apache.org/
 .. _Python: https://www.python.org/

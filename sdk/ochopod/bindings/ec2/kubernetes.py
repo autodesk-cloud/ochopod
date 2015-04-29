@@ -84,7 +84,7 @@ class Pod(EC2Kubernetes):
                 return lines[0]
 
             #
-            # - curl to the k8s master @ 10.0.0.1 to retrieve info about our cluster
+            # - curl to the k8s RO service @ 10.0.0.1 to retrieve info about our cluster
             # - don't forget to merge the resulting output
             #
             def _k8s(token):
@@ -107,7 +107,7 @@ class Pod(EC2Kubernetes):
                 logger.info('running in local mode (make sure you run a standalone zookeeper)')
                 hints.update(
                     {
-                        'node': 'local',
+                        'node': 'localhost',
                         'public': '127.0.0.1',
                         'ip': '127.0.0.1',
                         'zk': '127.0.0.1:2181'
@@ -116,47 +116,50 @@ class Pod(EC2Kubernetes):
 
                 #
                 # - look our local k8s pod up
-                # - get our pod IP
+                # - get our container ip
                 # - extract the port bindings
                 # - keep any "ochopod_" environment variable & trim its prefix
                 #
                 cfg = _k8s('pods/%s' % env['HOSTNAME'])
                 hints['ip'] = cfg['status']['podIP']
 
-                ports={}
+                #
+                # - revert to the k8s pod name if no cluster is specified
+                #
+                if not hints['cluster']:
+                    hints['cluster'] = cfg['metadata']['name']
+
+                #
+                # - consider the 1st pod container
+                # - grab the exposed ports (no remapping required)
+                #
+                ports = {}
                 container = cfg['spec']['containers'][0]
                 for binding in container['ports']:
                     port = binding['containerPort']
-                    ports[str(port)]=port
+                    ports[str(port)] = port
 
                 hints.update(
                     {
-                        'fwk': 'k8s',
+                        'fwk': 'kubernetes',
                         'ports': ports,
+                        'task': env['HOSTNAME']
                     })
 
                 #
+                # - look the k8s "ocho-proxy" pod up
+                # - it should be design run our synchronization zookeeper
                 # - get our public IPV4 address
                 # - the "node" will show up as the EC2 instance ID
                 #
                 hints['public'] = _aws('public-ipv4')
                 hints['node'] = _aws('instance-id')
-
-                #
-                # - look our k8s "proxy" pod up
-                # - it should be design run our synchronization zookeeper
-                #
-                cfg = _k8s('pods/ocho-proxy')
-                hints['zk'] = cfg['status']['podIP']
+                hints['zk'] = _k8s('pods/ocho-proxy')['status']['podIP']
 
             #
             # - the cluster must be fully qualified with a namespace (which is defaulted anyway)
-            # - if the cluster is not specified use the pod identifier as a fallback
             #
-            assert hints['namespace'], 'no cluster namespace defined (user error ?)'
-            if not hints['cluster']:
-                logger.debug('cluster identifier not defined, falling back on %s' % env['HOSTNAME'])
-                hints['cluster'] = env['HOSTNAME']
+            assert hints['namespace'], 'no namespace defined (user error ?)'
 
             #
             # - start the life-cycle actor which will pass our hints (as a json object) to its underlying sub-process
@@ -201,6 +204,7 @@ class Pod(EC2Kubernetes):
             def _info():
                 keys = \
                     [
+                        'application',
                         'ip',
                         'node',
                         'port',
