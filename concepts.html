@@ -76,31 +76,34 @@ asked to get itself in order while having access to a full, consistent view of t
 model is fully automated and just require the user to define the actual configuration logic, typically to render
 a few files on disk.</p>
 </div>
-<div class="section" id="the-stack">
-<h3>The stack<a class="headerlink" href="#the-stack" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="overlay">
+<h3>Overlay<a class="headerlink" href="#overlay" title="Permalink to this headline">¶</a></h3>
+<p>Ochopod is really an <strong>overlay</strong> that sits on top of a resourcing platform. This overlay hides the internal details
+specific to <a class="reference external" href="http://mesos.apache.org/">Mesos</a> or <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> for instance (typically how pods are identified, where they run, etc) and provides
+some higher-level model.</p>
 <p>Ochopod is meant to be used on top of modern resourcing technologies. Our stack is made of three distinct
-layers : a pool of resources (either virtualized or bare-metal), the resourcing layer (<a class="reference external" href="http://mesos.apache.org/">Mesos</a> plus one or more
-frameworks such as <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> or <a class="reference external" href="http://aurora.incubator.apache.org/">Aurora</a>) and finally the application layer on top (e.g <a class="reference external" href="https://www.docker.com/">Docker</a> and whatever runs in
-the containers).</p>
+layers : a pool of resources (either virtualized or bare-metal), the resourcing layer (<a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> or <a class="reference external" href="http://mesos.apache.org/">Mesos</a> plus one
+or more frameworks such as <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> or <a class="reference external" href="http://aurora.incubator.apache.org/">Aurora</a>) and finally the application layer on top (e.g <a class="reference external" href="https://www.docker.com/">Docker</a> and whatever
+runs in the containers).</p>
 <div class="figure align-center">
 <a class="reference internal image-reference" href="_images/stack.png"><img alt="_images/stack.png" src="_images/stack.png" style="width: 45%;" /></a>
 </div>
 <p>As mentioned above Ochopod runs into containers. From a functional standpoint it acts as a cross between an init and
 a distributed configuration service (e.g <a class="reference external" href="https://github.com/coreos/etcd">Etcd</a> or <a class="reference external" href="https://github.com/ha/doozer">Doozer</a>). The catch is that Ochopod will rely on the resourcing layer
-to store its state: in other words it will piggy back on the internal <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> ensemble used by <a class="reference external" href="http://mesos.apache.org/">Mesos</a>. This allows
-you to run your stuff without having to worry about managing yet another piece.</p>
+to store its state depending on what stack is used.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">There is no strong constraint around what <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> ensemble you used. In fact you could point Ochopod to use any
-ensemble out there. Re-using the <a class="reference external" href="http://mesos.apache.org/">Mesos</a> infrastructure for synchronization is however very convenient.</p>
+<p class="last">There is no strong constraint around what <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> ensemble is used. For <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> we for instance run a
+dedicated pod running a standalone <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a>. For <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> we simply piggy back on the internal <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a>
+ensemble used by <a class="reference external" href="http://mesos.apache.org/">Mesos</a>.</p>
 </div>
 <p>Ochopod is completely independent from the resourcing layer underneath. The only relationship between the two is
 the fact the resourcing layer indirectly spawns containers which in turn run Ochopod.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">We don&#8217;t expect any specific resourcing or containerization technology. Ochopod has been developed and tested
-with a <a class="reference external" href="http://mesos.apache.org/">Mesos</a>, <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a>, <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> and <a class="reference external" href="https://www.docker.com/">Docker</a> stack but could be easily extended to suit more situations, for
-instance running over <a class="reference external" href="http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html">Yarn</a>.</p>
+with a <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> / <a class="reference external" href="http://mesos.apache.org/">Mesos</a> / <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a>, <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> and <a class="reference external" href="https://www.docker.com/">Docker</a> stack but could be easily extended to suit more
+situations, for instance running over <a class="reference external" href="http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html">Yarn</a>.</p>
 </div>
 </div>
 <div class="section" id="terminology">
@@ -114,8 +117,8 @@ more such pods. One or more pods running off the same image will form a <strong>
 exposing the same ports).</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">Please note a cluster does not necessarily map to one single <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> application for instance. Clusters are
-orthogonal to the underlying framework data-model.</p>
+<p class="last">Please note a cluster does not necessarily map to one single <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> application or <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> replication
+controller for instance. Clusters are orthogonal to the underlying framework data-model.</p>
 </div>
 <p>Clusters are your basic lego blocks upon which you build more complex distribute systems. Now since the same resource
 pool may end up running pods sharing a container image in different contexts (consider for instance various deployments
@@ -176,13 +179,12 @@ object whose key/value pairs represent basic information describing stuff such a
 they expose.</p>
 <p>This data is merged from two sources :</p>
 <ol class="arabic simple">
-<li>Environment variables passed by the running framework (<a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> in our case). This is also a way for the user to
-pass settings.</li>
+<li>Environment variables passed by the running framework (<a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> for instance). This is also a way for the user to
+pass application settings.</li>
 <li>Bindings specific logic, for instance by querying the underlying EC2 instance to grab our current IP.</li>
 </ol>
 <p>The important settings are the internal/external IPs used to locate the pod and its port re-mappings (which depend on
-the framework used). This payload stored in <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> is used and passed down by the leader when configuring the
-cluster.</p>
+the stack used). This payload stored in <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> is used and passed down by the leader when configuring the cluster.</p>
 <p>Each pod has a unique identifier (UUID) plus a unique index generated from <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a>. This index is not guaranteed to
 span a continuous interval but is indeed unique within the cluster and throughout the lifetime of the pod.
 Disconnecting and reconnecting to <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> will not affect the UUID nor the index.</p>
@@ -214,6 +216,7 @@ successfully and is running his sub-process while <em>dead</em> indicates the po
 For instance:</p>
 <div class="code python highlight-python"><div class="highlight"><pre><span class="p">{</span>
     <span class="s">&quot;node&quot;</span><span class="p">:</span> <span class="s">&quot;i-300345df&quot;</span><span class="p">,</span>
+    <span class="s">&quot;application&quot;</span><span class="p">:</span> <span class="s">&quot;marathon.proxy-2015-03-06-13-40-19&quot;</span><span class="p">,</span>
     <span class="s">&quot;task&quot;</span><span class="p">:</span> <span class="s">&quot;marathon.proxy-2015-03-06-13-40-19.c14e769b-c406-11e4-afa0-e9799&quot;</span><span class="p">,</span>
     <span class="s">&quot;process&quot;</span><span class="p">:</span> <span class="s">&quot;running&quot;</span><span class="p">,</span>
     <span class="s">&quot;ip&quot;</span><span class="p">:</span> <span class="s">&quot;10.181.100.14&quot;</span><span class="p">,</span>
@@ -222,7 +225,6 @@ For instance:</p>
         <span class="s">&quot;8080&quot;</span><span class="p">:</span> <span class="mi">1025</span><span class="p">,</span>
         <span class="s">&quot;9000&quot;</span><span class="p">:</span> <span class="mi">1026</span>
     <span class="p">},</span>
-    <span class="s">&quot;application&quot;</span><span class="p">:</span> <span class="s">&quot;marathon.proxy-2015-03-06-13-40-19&quot;</span><span class="p">,</span>
     <span class="s">&quot;state&quot;</span><span class="p">:</span> <span class="s">&quot;follower&quot;</span><span class="p">,</span>
     <span class="s">&quot;port&quot;</span><span class="p">:</span> <span class="s">&quot;8080&quot;</span>
 <span class="p">}</span>
@@ -256,9 +258,12 @@ revolves mostly around getting the pod the data it needs.</p>
 <p>Ochopod does not define any data-model of its own to manage pods, version them, perform rolling deployments, etc. This
 is typically built on top by defining custom tools and taking advantage of each framework capabilities. For instance
 <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> offers enough semantics with its application REST API to implement a simple CI/CD pipeline.</p>
+<p>Our pods transport 2 dedicated hints : <strong>application</strong> and <strong>task</strong>. The <strong>application</strong> identifies the high-level
+construct through which the pod was created (for instance a <em>replication controller</em> in the <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> case). The
+<strong>task</strong> identifies the pod itself in the underlying stack.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">We only offer bindings to run over <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> and EC2 at this point.</p>
+<p class="last">We only offer bindings to run over <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> and <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> over EC2 at this point.</p>
 </div>
 </div>
 </div>
@@ -277,7 +282,7 @@ is typically built on top by defining custom tools and taking advantage of each 
 <li><a class="reference internal" href="#">Concepts</a><ul>
 <li><a class="reference internal" href="#architecture">Architecture</a><ul>
 <li><a class="reference internal" href="#overview">Overview</a></li>
-<li><a class="reference internal" href="#the-stack">The stack</a></li>
+<li><a class="reference internal" href="#overlay">Overlay</a></li>
 <li><a class="reference internal" href="#terminology">Terminology</a></li>
 </ul>
 </li>

@@ -61,10 +61,10 @@
 <h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="ochopod">
 <h2>Ochopod<a class="headerlink" href="#ochopod" title="Permalink to this headline">¶</a></h2>
-<p>Ochopod is a <a class="reference external" href="https://www.python.org/">Python</a> package that performs automatic orchestration for containers running over <a class="reference external" href="http://mesos.apache.org/">Mesos</a>. It does
-rely on <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> for synchronization and is built using the cool <a class="reference external" href="https://github.com/jodal/pykka/">Pykka</a> actor system port. You can easily embed
-Ochopod in your <a class="reference external" href="https://www.docker.com/">Docker</a> containers and address complex situations where various systems cross-reference each others
-at run-time.</p>
+<p>Ochopod is a <a class="reference external" href="https://www.python.org/">Python</a> package that performs automatic orchestration for containers running over <a class="reference external" href="http://mesos.apache.org/">Mesos</a> or <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a>.
+It does rely on <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> for synchronization and is built using the cool <a class="reference external" href="https://github.com/jodal/pykka/">Pykka</a> actor system port. You can easily
+embed Ochopod in your <a class="reference external" href="https://www.docker.com/">Docker</a> containers and address complex situations where various systems cross-reference each
+others at run-time.</p>
 </div>
 <div class="section" id="contents">
 <h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
@@ -74,9 +74,8 @@ at run-time.</p>
 <li class="toctree-l2"><a class="reference internal" href="intro.html#problem-statement">Problem statement</a></li>
 <li class="toctree-l2"><a class="reference internal" href="intro.html#mesos-marathon-ochopod">Mesos, Marathon &amp; Ochopod</a></li>
 <li class="toctree-l2"><a class="reference internal" href="intro.html#getting-started">Getting started</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="intro.html#the-cluster">The cluster</a></li>
 <li class="toctree-l3"><a class="reference internal" href="intro.html#try-it-out-locally">Try it out locally</a></li>
-<li class="toctree-l3"><a class="reference internal" href="intro.html#let-s-containerize-zookeeper">Let&#8217;s containerize Zookeeper !</a></li>
+<li class="toctree-l3"><a class="reference internal" href="intro.html#a-zookeeper-ensemble-over-kubernetes">A Zookeeper ensemble over Kubernetes !</a></li>
 </ul>
 </li>
 </ul>
@@ -84,7 +83,7 @@ at run-time.</p>
 <li class="toctree-l1"><a class="reference internal" href="concepts.html">Concepts</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="concepts.html#architecture">Architecture</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="concepts.html#overview">Overview</a></li>
-<li class="toctree-l3"><a class="reference internal" href="concepts.html#the-stack">The stack</a></li>
+<li class="toctree-l3"><a class="reference internal" href="concepts.html#overlay">Overlay</a></li>
 <li class="toctree-l3"><a class="reference internal" href="concepts.html#terminology">Terminology</a></li>
 </ul>
 </li>
@@ -103,10 +102,6 @@ at run-time.</p>
 <li class="toctree-l2"><a class="reference internal" href="api.html#module-ochopod">General</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#module-api">Data model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#bindings">Bindings</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="tools.html">Tools &amp; Automation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tools.html#our-swiss-army-knife">Our Swiss army knife</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a><ul>

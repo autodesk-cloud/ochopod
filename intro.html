@@ -64,20 +64,20 @@
 <div class="section" id="problem-statement">
 <h2>Problem statement<a class="headerlink" href="#problem-statement" title="Permalink to this headline">¶</a></h2>
 <p>You are building some cool distributed backend and since you&#8217;re at the bleeding edge you decided to use <a class="reference external" href="https://www.docker.com/">Docker</a>
-containers. Even better you decided to be even cooler and run atop a <a class="reference external" href="http://mesos.apache.org/">Mesos</a> platform.</p>
-<p>You now have plenty of containers floating around on multiple nodes and using all kinds of random ports.</p>
+containers. Even better you decided to be even cooler and run atop a <a class="reference external" href="http://mesos.apache.org/">Mesos</a> or <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> stack.</p>
+<p>You now have plenty of containers floating around on multiple nodes and using all kinds of random ports and IPs.</p>
 <p>How do you manage them? How do you solve annoying cross-container configuration issues? How do you identify issues
 and peek at logs? How do you reconnect your CI/CD pipeline with this?</p>
 <p>No need to pull you hair anymore, simply use Ochopod!</p>
 </div>
 <div class="section" id="mesos-marathon-ochopod">
 <h2>Mesos, Marathon &amp; Ochopod<a class="headerlink" href="#mesos-marathon-ochopod" title="Permalink to this headline">¶</a></h2>
-<p>Without getting too much into details <a class="reference external" href="http://mesos.apache.org/">Mesos</a> and its <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> framework will manage <a class="reference external" href="https://www.docker.com/">Docker</a> containers for you. What
-you do is run an <em>application</em> : you specify an image, environment variables, constraints plus a number of instances
-and <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> will ask <a class="reference external" href="http://mesos.apache.org/">Mesos</a> for available resources. It will then ask the <a class="reference external" href="https://www.docker.com/">Docker</a> daemon on those resources to run
-your image. <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> will also automatically remap the ports exposed by the containers.</p>
-<p>By embedding and invoking the Ochopod SDK in your <a class="reference external" href="https://www.docker.com/">Docker</a> image you will run an init-like system in your container
-which will do 3 things :</p>
+<p>Without getting too much into details system like <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> or <a class="reference external" href="http://mesos.apache.org/">Mesos</a> will manage <a class="reference external" href="https://www.docker.com/">Docker</a> containers for you. What
+you do is run some <em>high level construct</em> (a <em>replication controller</em> on <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> for instance) : you specify an
+image, environment variables, constraints plus a number of instances and the stack will look for available resources.
+It will then ask the <a class="reference external" href="https://www.docker.com/">Docker</a> daemon on those resources to run your image appropriately.</p>
+<p>By embedding and invoking Ochopod in your <a class="reference external" href="https://www.docker.com/">Docker</a> image you will run an init-like system in your container which will
+do 3 things :</p>
 <ol class="arabic simple">
 <li><strong>Synchronize automatically</strong> with all other containers spawned by your application (e.g your peers).</li>
 <li><strong>Spawn the sub-process of your choice</strong> and restart it in case of unexpected failure.</li>
@@ -85,27 +85,16 @@ which will do 3 things :</p>
 </ol>
 <p>Your <em>Dockerfile</em> specifies what needs to be installed in your container while your script defines what process needs
 to be started and how to configure it across multiple instances.</p>
-<p>This allows you to efficiently coordinate multiple containers to form for instance a <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> ensemble or a
+<p>This allows you to efficiently coordinate multiple containers to form for instance a <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> ensemble or a
 <a class="reference external" href="http://cassandra.apache.org/">Cassandra</a> ring in a nice automatic way. More interestingly you can also express transitive dependencies between your
-clusters, e.g your set of <a class="reference external" href="http://kafka.apache.org/">Kafka</a> brokers will only configure when their underlying <a class="reference external" href="http://zookeeper.apache.org/">zookeeper</a> ensemble is up and
+clusters, e.g your set of <a class="reference external" href="http://kafka.apache.org/">Kafka</a> brokers will only configure when their underlying <a class="reference external" href="http://zookeeper.apache.org">zookeeper</a> ensemble is up and
 running with more than 3 nodes. Finding out where the pods run and what ports they expose is all taken care of for you.</p>
 </div>
 <div class="section" id="getting-started">
 <h2>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="the-cluster">
-<h3>The cluster<a class="headerlink" href="#the-cluster" title="Permalink to this headline">¶</a></h3>
-<p>You first of course need a <a class="reference external" href="http://mesos.apache.org/">Mesos</a> cluster running <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a>. This is easy to do and can be nicely automated using
-<a class="reference external" href="http://www.getchef.com/chef/">Chef</a> for instance. I won&#8217;t cover this, you know how to do it. Just make sure you install <a class="reference external" href="https://www.docker.com/">Docker</a> and setup your
-slaves to use it. If you&#8217;re lazy you can always run a master/slave hybrid on one single node (not recommended but
-whatever).</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Run your cluster in AWS/EC2 as we only offer bindings for that provider right now.</p>
-</div>
-</div>
 <div class="section" id="try-it-out-locally">
 <h3>Try it out locally<a class="headerlink" href="#try-it-out-locally" title="Permalink to this headline">¶</a></h3>
-<p>Simply run a local <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> server on your workstation. Then install the SDK and run the little <em>shell.py</em> example:</p>
+<p>Simply run a local <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> server on your workstation. Then install the SDK and run the little <a class="reference external" href="https://github.com/autodesk-cloud/ochopod/blob/master/examples/shell.py">shell</a> example:</p>
 <div class="code python highlight-python"><div class="highlight"><pre>$ cd ochopod-python-sdk/sdk
 $ python setup.py install
 $ python ../examples/shell.py
@@ -116,23 +105,53 @@ INFO - starting marathon.local (marathon/ec2) @ local
 </pre></div>
 </div>
 <p>This pod will terminate after around 5 seconds and runs a trivial bash statement. You can tweak the code and
-experiment. Try turning your <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> server on/off and you&#8217;ll see the pod re-connecting automatically.</p>
+experiment. Try turning your <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> server on/off and you&#8217;ll see the pod re-connecting automatically.</p>
 </div>
-<div class="section" id="let-s-containerize-zookeeper">
-<h3>Let&#8217;s containerize Zookeeper !<a class="headerlink" href="#let-s-containerize-zookeeper" title="Permalink to this headline">¶</a></h3>
-<p>It&#8217;s now time to do something a bit more realistic. You probably noticed there is a <em>Dockerfile</em> in the repository.
-Just build and either push it to your private repository or build the image on each node within your cluster if you
-prefer. Our pod is a small example of how to run a containerized <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> ensemble over <a class="reference external" href="http://mesos.apache.org/">Mesos</a>. The corresponding
-code and resources are located under <em>/examples/zookeeper</em>.</p>
-<p>You are now ready to spawn an application in <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> using our new image. Since we&#8217;re running <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> make sure
-to expose ports 2181, 2888 and 3888. Also expose 8080 since this is our control port (e.g the port used by the pods
-to communicate). Be bold and go for at least 3 instances.</p>
+<div class="section" id="a-zookeeper-ensemble-over-kubernetes">
+<h3>A Zookeeper ensemble over Kubernetes !<a class="headerlink" href="#a-zookeeper-ensemble-over-kubernetes" title="Permalink to this headline">¶</a></h3>
+<p>It&#8217;s now time to do something a bit more realistic. Go peek at the <a class="reference external" href="https://github.com/autodesk-cloud/ochonetes/tree/master/images/zookeeper">container</a> we use as an example in another of our
+projects. Build and either push it to your hub account or private repository or build the image on each node within
+your cluster if you prefer. This container is a small example of how to run a containerized <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> ensemble over
+<a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a>. Feel free to explore the code and see how it is done.</p>
+<p>OK, you have your new image and are now ready to spawn an <em>replication controller</em>. Since we&#8217;re running <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> make
+sure to expose ports 2181, 2888 and 3888. Also expose 8080 since this is our control port (e.g the port used by the pods
+to communicate). Be bold and go for at least 3 instances. For instance:</p>
+<div class="code yaml highlight-python"><div class="highlight"><pre>kind: ReplicationController
+apiVersion: v1beta3
+metadata:
+  name: zk
+spec:
+  replicas: 3
+  selector:
+    name: zk
+  template:
+    metadata:
+      labels:
+        name: zk
+    spec:
+      containers:
+      - name: zookeper
+        image: paugamo/k8s-ec2-zookeeper
+        env:
+          - name:   ochopod_cluster
+            value:  ensemble
+
+        ports:
+            - containerPort: 2181
+            - containerPort: 2888
+            - containerPort: 3888
+            - containerPort: 8080
+</pre></div>
+</div>
+<p>You&#8217;ll notice we pass <em>ochopod_cluster</em> down to the container. This will tell Ochopod to assemble all those pods into
+a cluster called <em>ensemble</em>. Please note the corresponding <em>replication controller</em> will be named differently (which
+is fine).</p>
 <p>Once your containers are running wait a few seconds for the cluster to form and stabilize. You can then test out your
-newly formed ensemble by sending a <em>MNTR</em> command to any pod on the port remapping TCP 2181. You should get a
-well-formed response telling you the remote server is indeed up and part of a ensemble.</p>
-<p>That&#8217;s pretty much it. Now go in the <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> UI and scale your application up. You&#8217;ll again get a functional
-ensemble (larger this time) after a few seconds! Woa now that is cool.</p>
-<p>I picked <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a> as it&#8217;s a classic case giving dev/ops engineers nightmares. Swap it for any system requiring
+newly formed ensemble by sending a <em>MNTR</em> command to any pod on TCP 2181. You should get a well-formed response telling
+you the remote server is indeed up and part of a ensemble.</p>
+<p>That&#8217;s pretty much it. Now scale your controller up. You&#8217;ll again get a functional ensemble (larger this time) after a
+few seconds! Woa now that is cool.</p>
+<p>I picked <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> as it&#8217;s a classic case giving dev/ops engineers nightmares. Swap it for any system requiring
 either a sequenced bootstrap (usually <a class="reference external" href="http://en.wikipedia.org/wiki/Gossip_protocol">Gossip</a> based system or <a class="reference external" href="http://www.rabbitmq.com/">RabbitMQ</a> for instance) or some level of global
 knowledge prior to configuring its nodes and you will then realize how much Ochopod can help you.</p>
 </div>
@@ -154,9 +173,8 @@ knowledge prior to configuring its nodes and you will then realize how much Ocho
 <li><a class="reference internal" href="#problem-statement">Problem statement</a></li>
 <li><a class="reference internal" href="#mesos-marathon-ochopod">Mesos, Marathon &amp; Ochopod</a></li>
 <li><a class="reference internal" href="#getting-started">Getting started</a><ul>
-<li><a class="reference internal" href="#the-cluster">The cluster</a></li>
 <li><a class="reference internal" href="#try-it-out-locally">Try it out locally</a></li>
-<li><a class="reference internal" href="#let-s-containerize-zookeeper">Let&#8217;s containerize Zookeeper !</a></li>
+<li><a class="reference internal" href="#a-zookeeper-ensemble-over-kubernetes">A Zookeeper ensemble over Kubernetes !</a></li>
 </ul>
 </li>
 </ul>

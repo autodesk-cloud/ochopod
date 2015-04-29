@@ -480,11 +480,9 @@ cluster capacity up or down.</p>
 <dt id="bindings.ec2.api.EC2Marathon">
 <em class="property">class </em><code class="descclassname">bindings.ec2.api.</code><code class="descname">EC2Marathon</code><a class="headerlink" href="#bindings.ec2.api.EC2Marathon" title="Permalink to this definition">¶</a></dt>
 <dd><p>Mesosphere/Marathon framework binding for pods running on AWS/EC2, providing some basic environment variable
-translation (especially the port mappings). We run a Flask micro-server to handle leader or CLI requests. The
-pod IP addresses are retrieved via the EC2 instance metadata.</p>
-<p>You <strong>must</strong> run this on a EC2 instance with Apache Mesos installed unless you use the local mode in which case
-everything will be assumed to run on localhost (include Zookeeper). You also <strong>must</strong> mount /etc/mesos onto the
-container (preferably in read-only mode).</p>
+translation (especially the port mappings). We run a Flask micro-server to handle leader or CLI requests.</p>
+<p>You <strong>must</strong> run this on a EC2 instance with Apache Mesos installed. You also <strong>must</strong> mount /etc/mesos onto the
+container (preferably in read-only mode). The pod IP addresses are retrieved via the EC2 instance metadata.</p>
 <p>The pod requires configuration settings from the environment variables. All settings are simple key/value
 pairs prefixed by <em>ochopod</em>. These are optional settings you may specify (e.g you can set them in your application
 configuration):</p>
@@ -502,15 +500,15 @@ for instance, defaulted to the Marathon application identifier if not specified)
 <div><ul class="simple">
 <li><strong>cluster</strong>: the pod cluster</li>
 <li><strong>namespace</strong>: the pod namespace</li>
-<li><strong>binding</strong>: set to <em>marathon</em></li>
-<li><strong>ports</strong>: port remapping, as a dict</li>
+<li><strong>binding</strong>: set to <em>mesos+marathon</em></li>
+<li><strong>ports</strong>: exposed ports, as a dict</li>
 <li><strong>port</strong>: local control port</li>
 <li><strong>debug</strong>: true if debug logging is on</li>
-<li><strong>application</strong>: Marathon application identifier</li>
-<li><strong>task</strong>: Mesos task identifier</li>
+<li><strong>application</strong>: controlling Marathon application identifier</li>
+<li><strong>task</strong>: underlying Mesos task identifier</li>
 <li><strong>seq</strong>: unique pod index within the cluster</li>
 <li><strong>node</strong>: EC2 instance id of the underlying node running the container.</li>
-<li><strong>ip</strong>: EC2 instance local IPv4.</li>
+<li><strong>ip</strong>: EC2 instance local IPv4 on which the pod is running.</li>
 <li><strong>public</strong>: externally reachable EC2 instance IPv4 (used for the CLI or 3rd party integrations).</li>
 <li><strong>zk</strong>: connection string for our Zookeeper ensemble (looked up from /etc/mesos/zk).</li>
 </ul>

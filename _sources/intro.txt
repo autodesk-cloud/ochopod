@@ -5,9 +5,9 @@ Problem statement
 _________________
 
 You are building some cool distributed backend and since you're at the bleeding edge you decided to use Docker_
-containers. Even better you decided to be even cooler and run atop a Mesos_ platform.
+containers. Even better you decided to be even cooler and run atop a Mesos_ or Kubernetes_ stack.
 
-You now have plenty of containers floating around on multiple nodes and using all kinds of random ports.
+You now have plenty of containers floating around on multiple nodes and using all kinds of random ports and IPs.
 
 How do you manage them? How do you solve annoying cross-container configuration issues? How do you identify issues
 and peek at logs? How do you reconnect your CI/CD pipeline with this?
@@ -18,13 +18,13 @@ No need to pull you hair anymore, simply use Ochopod!
 Mesos, Marathon & Ochopod
 _________________________
 
-Without getting too much into details Mesos_ and its Marathon_ framework will manage Docker_ containers for you. What
-you do is run an *application* : you specify an image, environment variables, constraints plus a number of instances
-and Marathon_ will ask Mesos_ for available resources. It will then ask the Docker_ daemon on those resources to run
-your image. Marathon_ will also automatically remap the ports exposed by the containers.
+Without getting too much into details system like Kubernetes_ or Mesos_ will manage Docker_ containers for you. What
+you do is run some *high level construct* (a *replication controller* on Kubernetes_ for instance) : you specify an
+image, environment variables, constraints plus a number of instances and the stack will look for available resources.
+It will then ask the Docker_ daemon on those resources to run your image appropriately.
 
-By embedding and invoking the Ochopod SDK in your Docker_ image you will run an init-like system in your container
-which will do 3 things :
+By embedding and invoking Ochopod in your Docker_ image you will run an init-like system in your container which will
+do 3 things :
 
 1. **Synchronize automatically** with all other containers spawned by your application (e.g your peers).
 2. **Spawn the sub-process of your choice** and restart it in case of unexpected failure.
@@ -41,20 +41,10 @@ running with more than 3 nodes. Finding out where the pods run and what ports th
 Getting started
 _______________
 
-The cluster
-***********
-
-You first of course need a Mesos_ cluster running Marathon_. This is easy to do and can be nicely automated using
-Chef_ for instance. I won't cover this, you know how to do it. Just make sure you install Docker_ and setup your
-slaves to use it. If you're lazy you can always run a master/slave hybrid on one single node (not recommended but
-whatever).
-
-.. note:: Run your cluster in AWS/EC2 as we only offer bindings for that provider right now.
-
 Try it out locally
 ******************
 
-Simply run a local Zookeeper_ server on your workstation. Then install the SDK and run the little *shell.py* example:
+Simply run a local Zookeeper_ server on your workstation. Then install the SDK and run the little shell_ example:
 
 .. code:: python
 
@@ -69,24 +59,56 @@ Simply run a local Zookeeper_ server on your workstation. Then install the SDK a
 This pod will terminate after around 5 seconds and runs a trivial bash statement. You can tweak the code and
 experiment. Try turning your Zookeeper_ server on/off and you'll see the pod re-connecting automatically.
 
-Let's containerize Zookeeper !
-******************************
+A Zookeeper ensemble over Kubernetes !
+**************************************
 
-It's now time to do something a bit more realistic. You probably noticed there is a *Dockerfile* in the repository.
-Just build and either push it to your private repository or build the image on each node within your cluster if you
-prefer. Our pod is a small example of how to run a containerized Zookeeper_ ensemble over Mesos_. The corresponding
-code and resources are located under */examples/zookeeper*.
+It's now time to do something a bit more realistic. Go peek at the container_ we use as an example in another of our
+projects. Build and either push it to your hub account or private repository or build the image on each node within
+your cluster if you prefer. This container is a small example of how to run a containerized Zookeeper_ ensemble over
+Kubernetes_. Feel free to explore the code and see how it is done.
 
-You are now ready to spawn an application in Marathon_ using our new image. Since we're running Zookeeper_ make sure
-to expose ports 2181, 2888 and 3888. Also expose 8080 since this is our control port (e.g the port used by the pods
-to communicate). Be bold and go for at least 3 instances.
+OK, you have your new image and are now ready to spawn an *replication controller*. Since we're running Zookeeper_ make
+sure to expose ports 2181, 2888 and 3888. Also expose 8080 since this is our control port (e.g the port used by the pods
+to communicate). Be bold and go for at least 3 instances. For instance:
+
+.. code:: yaml
+
+    kind: ReplicationController
+    apiVersion: v1beta3
+    metadata:
+      name: zk
+    spec:
+      replicas: 3
+      selector:
+        name: zk
+      template:
+        metadata:
+          labels:
+            name: zk
+        spec:
+          containers:
+          - name: zookeper
+            image: paugamo/k8s-ec2-zookeeper
+            env:
+              - name:   ochopod_cluster
+                value:  ensemble
+
+            ports:
+                - containerPort: 2181
+                - containerPort: 2888
+                - containerPort: 3888
+                - containerPort: 8080
+
+You'll notice we pass *ochopod_cluster* down to the container. This will tell Ochopod to assemble all those pods into
+a cluster called *ensemble*. Please note the corresponding *replication controller* will be named differently (which
+is fine).
 
 Once your containers are running wait a few seconds for the cluster to form and stabilize. You can then test out your
-newly formed ensemble by sending a *MNTR* command to any pod on the port remapping TCP 2181. You should get a
-well-formed response telling you the remote server is indeed up and part of a ensemble.
+newly formed ensemble by sending a *MNTR* command to any pod on TCP 2181. You should get a well-formed response telling
+you the remote server is indeed up and part of a ensemble.
 
-That's pretty much it. Now go in the Marathon_ UI and scale your application up. You'll again get a functional
-ensemble (larger this time) after a few seconds! Woa now that is cool.
+That's pretty much it. Now scale your controller up. You'll again get a functional ensemble (larger this time) after a
+few seconds! Woa now that is cool.
 
 I picked Zookeeper_ as it's a classic case giving dev/ops engineers nightmares. Swap it for any system requiring
 either a sequenced bootstrap (usually Gossip_ based system or RabbitMQ_ for instance) or some level of global
@@ -98,10 +120,14 @@ knowledge prior to configuring its nodes and you will then realize how much Ocho
 .. _Docker: https://www.docker.com/
 .. _Gossip: http://en.wikipedia.org/wiki/Gossip_protocol
 .. _Kafka: http://kafka.apache.org/
+.. _Kubernetes: https://github.com/GoogleCloudPlatform/kubernetes
 .. _Marathon: https://mesosphere.github.io/marathon/
 .. _Mesos: http://mesos.apache.org/
 .. _RabbitMQ: http://www.rabbitmq.com/
-.. _Zookeeper: http://zookeeper.apache.org/
+.. _shell: https://github.com/autodesk-cloud/ochopod/blob/master/examples/shell.py
+.. _Zookeeper: http://zookeeper.apache.org
+.. _container: https://github.com/autodesk-cloud/ochonetes/tree/master/images/zookeeper
+
 
 
 
