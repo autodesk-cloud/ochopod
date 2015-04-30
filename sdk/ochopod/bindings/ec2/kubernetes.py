@@ -18,6 +18,7 @@ import json
 import logging
 import ochopod
 import os
+import sys
 import threading
 import time
 
@@ -26,7 +27,7 @@ from ochopod.api import LifeCycle, Model
 from ochopod.bindings.ec2.api import EC2Kubernetes
 from ochopod.core.core import Coordinator
 from ochopod.core.fsm import diagnostic, shutdown, spin_lock
-from ochopod.core.utils import shell
+from ochopod.core.utils import retry, shell
 from ochopod.models.reactive import Actor as Reactive
 from pykka import ThreadingFuture
 from pykka.exceptions import Timeout, ActorDeadError
@@ -84,13 +85,17 @@ class Pod(EC2Kubernetes):
                 return lines[0]
 
             #
-            # - curl to the k8s RO service @ 10.0.0.1 to retrieve info about our cluster
+            # - curl to the RO service to retrieve info about our cluster
             # - don't forget to merge the resulting output
             #
             def _k8s(token):
-                code, lines = shell('curl -f http://10.0.0.1/api/v1beta3/namespaces/default/%s' % token)
-                assert code is 0, 'unable to look the kubernetes master up (is it running ?)'
-                return json.loads(''.join(lines))
+                assert 'KUBERNETES_RO_SERVICE_HOST' in env, '$KUBERNETES_RO_SERVICE_HOST unset (are you running on k8s ?)'
+                ip = env['KUBERNETES_RO_SERVICE_HOST']
+                code, lines = shell('curl -f http://%s/api/v1beta3/namespaces/default/%s' % (ip, token))
+                assert code is 0, 'unable to look the RO service up (is the master running ?)'
+                out = json.loads(''.join(lines))
+                logger.debug('<- RO service\n%s' % out)
+                return out
 
             #
             # - grab our environment variables
@@ -120,25 +125,38 @@ class Pod(EC2Kubernetes):
                 # - extract the port bindings
                 # - keep any "ochopod_" environment variable & trim its prefix
                 #
-                cfg = _k8s('pods/%s' % env['HOSTNAME'])
-                hints['ip'] = cfg['status']['podIP']
+                @retry(timeout=60, pause=1)
+                def _spin():
+
+                    #
+                    # - wait til the k8s pod is running and publishing its IP
+                    #
+                    cfg = _k8s('pods/%s' % env['HOSTNAME'])
+                    assert 'podIP' in cfg['status'], 'pod not ready yet -> %s' % cfg['status']['phase']
+                    return cfg
+
+                this_pod = _spin()
+                hints['ip'] = this_pod['status']['podIP']
 
                 #
                 # - revert to the k8s pod name if no cluster is specified
                 #
                 if not hints['cluster']:
-                    hints['cluster'] = cfg['metadata']['name']
+                    hints['cluster'] = this_pod['metadata']['name']
 
                 #
                 # - consider the 1st pod container
                 # - grab the exposed ports (no remapping required)
                 #
                 ports = {}
-                container = cfg['spec']['containers'][0]
+                container = this_pod['spec']['containers'][0]
                 for binding in container['ports']:
                     port = binding['containerPort']
                     ports[str(port)] = port
 
+                #
+                # - set 'task' to $HOSTNAME (the container is named after the k8s pod)
+                #
                 hints.update(
                     {
                         'fwk': 'kubernetes',
@@ -147,13 +165,18 @@ class Pod(EC2Kubernetes):
                     })
 
                 #
-                # - look the k8s "ocho-proxy" pod up
-                # - it should be design run our synchronization zookeeper
                 # - get our public IPV4 address
                 # - the "node" will show up as the EC2 instance ID
                 #
                 hints['public'] = _aws('public-ipv4')
                 hints['node'] = _aws('instance-id')
+
+                #
+                # - look the k8s "ocho-proxy" pod up
+                # - it should be design run our synchronization zookeeper
+                #
+                proxy = _k8s('pods/ocho-proxy')
+                assert 'podIP' in proxy['status'], 'proxy not ready ?'
                 hints['zk'] = _k8s('pods/ocho-proxy')['status']['podIP']
 
             #
@@ -319,3 +342,5 @@ class Pod(EC2Kubernetes):
         except Exception as failure:
 
             logger.fatal('unexpected condition -> %s' % diagnostic(failure))
+
+        exit(1)
