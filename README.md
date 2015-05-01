@@ -17,6 +17,11 @@ Please have a look at our [**Ochonetes**](https://github.com/autodesk-cloud/ocho
 quick PaaS on top of [**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) including a full toolkit, a
 cool web-shell and more !
 
+### Your base image
+
+In case you had not noticed you can build this repo as a Docker image ! This will give you a basic Ubuntu container
+that includes our code, Python 2.7 and the handy supervisor package.
+
 ### Documentation
 
 You can [**peruse our online documentation**](http://autodesk-cloud.github.io/ochopod/) for examples, design notes,
