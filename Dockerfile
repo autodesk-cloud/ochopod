@@ -5,9 +5,7 @@ ENV DEBIAN_FRONTEND noninteractive
 # - update our repo
 # - add python 2.7 + some utilities
 #
-RUN apt-get -y update
-RUN apt-get -y upgrade
-RUN apt-get -y install curl python python-requests supervisor
+RUN apt-get -y update && apt-get -y upgrade && apt-get -y install curl python python-requests supervisor
 
 #
 # - add the ochopod package and install it
