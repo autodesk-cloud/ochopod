@@ -18,7 +18,6 @@ import json
 import logging
 import ochopod
 import os
-import sys
 import threading
 import time
 
@@ -33,6 +32,7 @@ from pykka import ThreadingFuture
 from pykka.exceptions import Timeout, ActorDeadError
 from flask import Flask, request
 from requests import post
+from requests.auth import HTTPBasicAuth
 
 #: Our ochopod logger.
 logger = logging.getLogger('ochopod')
@@ -76,28 +76,6 @@ class Pod(EC2Kubernetes):
         try:
 
             #
-            # - we are (assuming to be) deployed on EC2
-            # - we'll retrieve the underlying metadata using curl
-            #
-            def _aws(token):
-                code, lines = shell('curl -f http://169.254.169.254/latest/meta-data/%s' % token)
-                assert code is 0, 'unable to lookup EC2 metadata for %s (are you running on EC2 ?)' % token
-                return lines[0]
-
-            #
-            # - curl to the RO service to retrieve info about our cluster
-            # - don't forget to merge the resulting output
-            #
-            def _k8s(token):
-                assert 'KUBERNETES_RO_SERVICE_HOST' in env, '$KUBERNETES_RO_SERVICE_HOST unset (are you running on k8s ?)'
-                ip = env['KUBERNETES_RO_SERVICE_HOST']
-                code, lines = shell('curl -f http://%s/api/v1beta3/namespaces/default/%s' % (ip, token))
-                assert code is 0, 'unable to look the RO service up (is the master running ?)'
-                out = json.loads(''.join(lines))
-                logger.debug('<- RO service\n%s' % out)
-                return out
-
-            #
             # - grab our environment variables
             # - isolate the ones prefixed with ochopod_
             #
@@ -118,6 +96,26 @@ class Pod(EC2Kubernetes):
                         'zk': '127.0.0.1:2181'
                     })
             else:
+
+                #
+                # - we are (assuming to be) deployed on EC2
+                # - we'll retrieve the underlying metadata using curl
+                #
+                def _aws(token):
+                    code, lines = shell('curl -f http://169.254.169.254/latest/meta-data/%s' % token)
+                    assert code is 0, 'unable to lookup EC2 metadata for %s (are you running on EC2 ?)' % token
+                    return lines[0]
+
+                #
+                # - lame workaround to fetch the master IP and credentials as there does not seem to be a way to
+                #   use 10.0.0.2 from within the pod yet (or i'm too stupid to find out)
+                # - curl to the master to retrieve info about our cluster
+                # - don't forget to merge the resulting output
+                #
+                def _k8s(token):
+                    code, lines = shell('curl -f -u %s:%s -k https://%s/api/v1beta3/namespaces/default/%s' % (env['KUBERNETES_USER'], env['KUBERNETES_PWD'], env['KUBERNETES_MASTER'], token))
+                    assert code is 0, 'unable to look the RO service up (is the master running ?)'
+                    return json.loads(''.join(lines))
 
                 #
                 # - look our local k8s pod up

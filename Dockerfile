@@ -15,7 +15,7 @@ RUN apt-get -y install curl python python-requests supervisor
 # - start supervisor
 #
 ADD resources/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-ADD sdk/ochopod /opt/ochopod
+ADD sdk /opt/ochopod
 RUN cd /opt/ochopod && python setup.py install
 RUN apt-get -y autoremove
 CMD /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
