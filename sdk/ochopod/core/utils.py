@@ -37,29 +37,27 @@ def merge(left, right):
     merged = deepcopy(left)
     for k, v in right.iteritems():
         if k in merged and isinstance(merged[k], dict):
-
             merged[k] = merge(merged[k], v)
-
         elif k in merged and isinstance(v, list) and isinstance(merged[k], list):
-
             merged[k] = merged[k] + deepcopy(v)
-
         else:
             merged[k] = deepcopy(v)
 
     return merged
 
 
-def retry(timeout, pause=5.0):
+def retry(timeout, pause=5.0, default=None):
     """
     Decorator implementing a simple unconditional re-try policy, e.g it will invoke the decorated
     method again upon any exception. If we keep invoking for too long a :class:`AssertionError` will be
-    raised.
+    raised unless a default return value is defined.
 
     :type timeout: float
     :param timeout: maximum amount of time in seconds we will keep re-trying for
     :type pause: float
     :param pause: amount of time in seconds we'll pause for before retrying
+    :type default: anything
+    :param default: optional value to return upon a timeout
     """
 
     def decorator(func):
@@ -72,8 +70,13 @@ def retry(timeout, pause=5.0):
 
                 except Exception as _:
 
-                    assert time.time() - ts < timeout, 'timeout exceeded @ %s()' % func.__name__
-                    time.sleep(pause)
+                    bad = time.time() - ts < timeout
+                    if bad and default is None:
+                        assert 0, 'timeout exceeded @ %s()' % func.__name__
+                    elif bad:
+                        return default
+                    else:
+                        time.sleep(pause)
 
         return wrapper
     return decorator

@@ -210,7 +210,6 @@ class FSM(ThreadingActor):
         #
         # - release our latches
         #
-        logger.debug('%s : shutting down (releasing %d latches)' % (self.path, len(self.latches)))
         while len(self.latches) > 0:
             self.latches.pop().set(code)
             Event()
@@ -239,8 +238,6 @@ class FSM(ThreadingActor):
         req = msg['request']
 
         if req == 'shutdown':
-
-            logger.debug('%s : shutdown initiated' % self.path)
 
             #
             # - set the termination trigger
@@ -357,7 +354,6 @@ class FSM(ThreadingActor):
                 data.cause = failure
                 data.previous = cmd['state']
                 data.diagnostic = str(failure)
-                logger.debug('%s : aborted (%s)' % (self.path, data.diagnostic))
                 self.actor_ref.tell({'fsm': {'state': 'reset', 'data': data}})
 
             except Exception as failure:
