@@ -70,7 +70,7 @@ def retry(timeout, pause=5.0, default=None):
 
                 except Exception as _:
 
-                    bad = time.time() - ts < timeout
+                    bad = time.time() - ts > timeout
                     if bad and default is None:
                         assert 0, 'timeout exceeded @ %s()' % func.__name__
                     elif bad:
