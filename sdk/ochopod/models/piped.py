@@ -320,6 +320,12 @@ class Actor(FSM, Piped):
                 env.update(data.env)
                 tokens = data.command if self.shell else data.command.split(' ')
                 data.forked = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell)
+                import os
+                outlog = open(os.path.join(self.cwd, 'out.log'), 'a') 
+                outlog.flush()
+                errlog = open(os.path.join(self.cwd, 'err.log'), 'a') 
+                errlog.flush()
+                data.forked = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell, stdout=outlog, stderr=errlog)
                 data.checks = self.checks
                 self.hints['process'] = 'running'
                 logger.info('%s : started <%s> as pid %s' % (self.path, data.command, data.forked.pid))
