@@ -7,7 +7,7 @@ This project is a small [**Python**](https://www.python.org/) package you can us
 [**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) or various [**Apache Mesos**](http://mesos.apache.org/)
 frameworks and coordinates how a given family of containers should cluster together at run-time. It transparently
 manages dependencies and port remapping as well. In short you effectively apply an _overlay_ to your provisioning stack
-that enabled you to do more !
+that enables you to do _more_ !
 
 Ochopod internally relies on [**Apache Zookeeper**](http://zookeeper.apache.org/) for synchronization and metadata
 storage.
