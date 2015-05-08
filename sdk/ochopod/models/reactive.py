@@ -310,8 +310,8 @@ class Actor(FSM, Reactive):
                 # - note we include an extra 'index' integer to the payload passed to the pod (this index
                 #   can be used to tag the pod in logs or perform specific setup procedures)
                 #
-                logger.debug('%s: json payload ->\n%s' % (self.path, json.dumps(js, indent=4, separators=(',', ': '))))
-                logger.info('%s: asking %d pods to configure' % (self.path, len(pods)))
+                logger.debug('%s : json payload ->\n%s' % (self.path, json.dumps(js, indent=4, separators=(',', ': '))))
+                logger.info('%s : asking %d pods to configure' % (self.path, len(pods)))
                 replies = _control('on')
                 assert all(code == 200 for _, code in replies), '1+ pods failed to configure'
 

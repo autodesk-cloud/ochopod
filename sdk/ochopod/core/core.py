@@ -176,7 +176,7 @@ class ZK(FSM):
             state = msg['state']
             logger.debug('%s : zk state change -> %s (%s)' % (self.path, str(state), 'connected' if self.connected else 'disconnected'))
             if self.connected and state != KazooState.CONNECTED:
-                logger.warning('%s: lost connection (%s) / forcing a reset' % (self.path, str(state)))
+                logger.warning('%s : lost connection (%s) / forcing a reset' % (self.path, str(state)))
                 self.force_reset = 1
                 self.connected = 0
 
