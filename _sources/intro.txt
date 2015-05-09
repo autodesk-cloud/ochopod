@@ -59,17 +59,17 @@ Simply run a local Zookeeper_ server on your workstation. Then install the SDK a
 This pod will terminate after around 5 seconds and runs a trivial bash statement. You can tweak the code and
 experiment. Try turning your Zookeeper_ server on/off and you'll see the pod re-connecting automatically.
 
-A Zookeeper ensemble over Kubernetes !
-**************************************
+A real Zookeeper ensemble over Kubernetes !
+*******************************************
 
 It's now time to do something a bit more realistic. Go peek at the container_ we use as an example in another of our
 projects. Build and either push it to your hub account or private repository or build the image on each node within
 your cluster if you prefer. This container is a small example of how to run a containerized Zookeeper_ ensemble over
 Kubernetes_. Feel free to explore the code and see how it is done.
 
-OK, you have your new image and are now ready to spawn an *replication controller*. Since we're running Zookeeper_ make
-sure to expose ports 2181, 2888 and 3888. Also expose 8080 since this is our control port (e.g the port used by the pods
-to communicate). Be bold and go for at least 3 instances. For instance:
+OK, you have your new image and are now ready to spawn a *replication controller*. Since we're running Zookeeper_ make
+sure to expose ports 2181, 2888 and 3888. Also expose 8080 since this is our control port (e.g the port used by the
+pods to communicate). Be bold and go for at least 3 instances. For instance:
 
 .. code:: yaml
 
@@ -100,8 +100,8 @@ to communicate). Be bold and go for at least 3 instances. For instance:
                 - containerPort: 8080
 
 You'll notice we pass *ochopod_cluster* down to the container. This will tell Ochopod to assemble all those pods into
-a cluster called *ensemble*. Please note the corresponding *replication controller* will be named differently (which
-is fine).
+one single cluster called *ensemble*. Please note the corresponding controller will be named differently (which is
+fine).
 
 Once your containers are running wait a few seconds for the cluster to form and stabilize. You can then test out your
 newly formed ensemble by sending a *MNTR* command to any pod on TCP 2181. You should get a well-formed response telling

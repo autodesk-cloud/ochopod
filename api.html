@@ -24,7 +24,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="ochopod 1.0 documentation" href="index.html" />
-    <link rel="next" title="Tools &amp; Automation" href="tools.html" />
+    <link rel="next" title="FAQ" href="faq.html" />
     <link rel="prev" title="Concepts" href="concepts.html" />
    
   
@@ -45,7 +45,7 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tools.html" title="Tools &amp; Automation"
+          <a href="faq.html" title="FAQ"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="concepts.html" title="Concepts"
@@ -515,6 +515,45 @@ for instance, defaulted to the Marathon application identifier if not specified)
 </div></blockquote>
 </dd></dl>
 
+<dl class="class">
+<dt id="bindings.ec2.api.EC2Kubernetes">
+<em class="property">class </em><code class="descclassname">bindings.ec2.api.</code><code class="descname">EC2Kubernetes</code><a class="headerlink" href="#bindings.ec2.api.EC2Kubernetes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Kubernetes binding for pods running on AWS/K8S, providing some basic cluster lookup. We run a Flask micro-server
+to handle leader or CLI requests. There is no port remapping given the way K8S uses sub-netting.</p>
+<p>You <strong>must</strong> run this on a EC2 instance part of a K8S cluster. It is assumed Zookeeper is running on a pod called
+&#8220;ocho-proxy&#8221;.  The pod &amp; ZK IPs are retrieved by looking the RO service on 10.0.0.1.</p>
+<p>The pod requires configuration settings from the environment variables. All settings are simple key/value
+pairs prefixed by <em>ochopod</em>. These are optional settings you may specify (e.g you can set them in your application
+configuration):</p>
+<blockquote>
+<div><ul class="simple">
+<li><em>ochopod_cluster</em>: identifier for the cluster to run this pod under (e.g &#8220;database&#8221; or &#8220;web-server&#8221;
+for instance, defaulted to the Marathon application identifier if not specified).</li>
+<li><em>ochopod_debug</em>: turns debug logging on if set to &#8220;true&#8221;.</li>
+<li><em>ochopod_namespace</em>: namespace as dot separated tokens (e.g &#8220;my-app.staging&#8221;), defaulted to &#8220;marathon&#8221;.</li>
+<li><em>ochopod_port</em>: pod control port on which we listen for HTTP requests, defaulted to 8080.</li>
+</ul>
+</div></blockquote>
+<p>The following payload is registered by the pod at boot time:</p>
+<blockquote>
+<div><ul class="simple">
+<li><strong>cluster</strong>: the pod cluster</li>
+<li><strong>namespace</strong>: the pod namespace</li>
+<li><strong>binding</strong>: set to <em>kubernetes</em></li>
+<li><strong>ports</strong>: exposed ports, as a dict</li>
+<li><strong>port</strong>: local control port</li>
+<li><strong>debug</strong>: true if debug logging is on</li>
+<li><strong>application</strong>: identifier for the K8S replication controller supervising the pod</li>
+<li><strong>task</strong>: underlying K8S pod identifier</li>
+<li><strong>seq</strong>: unique pod index within the cluster</li>
+<li><strong>node</strong>: EC2 instance id of the underlying node running the container.</li>
+<li><strong>ip</strong>: pod IP.</li>
+<li><strong>public</strong>: externally reachable EC2 instance IPv4 (used for the CLI or 3rd party integrations).</li>
+<li><strong>zk</strong>: connection string for our Zookeeper ensemble.</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
 </div>
 </div>
 
@@ -540,7 +579,7 @@ for instance, defaulted to the Marathon application identifier if not specified)
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="concepts.html" title="previous chapter">Concepts</a></li>
-      <li>Next: <a href="tools.html" title="next chapter">Tools &amp; Automation</a></li>
+      <li>Next: <a href="faq.html" title="next chapter">FAQ</a></li>
   </ul></li>
 </ul>
 <div id="searchbox" style="display: none" role="search">

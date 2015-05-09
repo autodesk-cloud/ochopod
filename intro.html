@@ -107,15 +107,15 @@ INFO - starting marathon.local (marathon/ec2) @ local
 <p>This pod will terminate after around 5 seconds and runs a trivial bash statement. You can tweak the code and
 experiment. Try turning your <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> server on/off and you&#8217;ll see the pod re-connecting automatically.</p>
 </div>
-<div class="section" id="a-zookeeper-ensemble-over-kubernetes">
-<h3>A Zookeeper ensemble over Kubernetes !<a class="headerlink" href="#a-zookeeper-ensemble-over-kubernetes" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="a-real-zookeeper-ensemble-over-kubernetes">
+<h3>A real Zookeeper ensemble over Kubernetes !<a class="headerlink" href="#a-real-zookeeper-ensemble-over-kubernetes" title="Permalink to this headline">¶</a></h3>
 <p>It&#8217;s now time to do something a bit more realistic. Go peek at the <a class="reference external" href="https://github.com/autodesk-cloud/ochonetes/tree/master/images/zookeeper">container</a> we use as an example in another of our
 projects. Build and either push it to your hub account or private repository or build the image on each node within
 your cluster if you prefer. This container is a small example of how to run a containerized <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> ensemble over
 <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a>. Feel free to explore the code and see how it is done.</p>
-<p>OK, you have your new image and are now ready to spawn an <em>replication controller</em>. Since we&#8217;re running <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> make
-sure to expose ports 2181, 2888 and 3888. Also expose 8080 since this is our control port (e.g the port used by the pods
-to communicate). Be bold and go for at least 3 instances. For instance:</p>
+<p>OK, you have your new image and are now ready to spawn a <em>replication controller</em>. Since we&#8217;re running <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> make
+sure to expose ports 2181, 2888 and 3888. Also expose 8080 since this is our control port (e.g the port used by the
+pods to communicate). Be bold and go for at least 3 instances. For instance:</p>
 <div class="code yaml highlight-python"><div class="highlight"><pre>kind: ReplicationController
 apiVersion: v1beta3
 metadata:
@@ -144,8 +144,8 @@ spec:
 </pre></div>
 </div>
 <p>You&#8217;ll notice we pass <em>ochopod_cluster</em> down to the container. This will tell Ochopod to assemble all those pods into
-a cluster called <em>ensemble</em>. Please note the corresponding <em>replication controller</em> will be named differently (which
-is fine).</p>
+one single cluster called <em>ensemble</em>. Please note the corresponding controller will be named differently (which is
+fine).</p>
 <p>Once your containers are running wait a few seconds for the cluster to form and stabilize. You can then test out your
 newly formed ensemble by sending a <em>MNTR</em> command to any pod on TCP 2181. You should get a well-formed response telling
 you the remote server is indeed up and part of a ensemble.</p>
@@ -174,7 +174,7 @@ knowledge prior to configuring its nodes and you will then realize how much Ocho
 <li><a class="reference internal" href="#mesos-marathon-ochopod">Mesos, Marathon &amp; Ochopod</a></li>
 <li><a class="reference internal" href="#getting-started">Getting started</a><ul>
 <li><a class="reference internal" href="#try-it-out-locally">Try it out locally</a></li>
-<li><a class="reference internal" href="#a-zookeeper-ensemble-over-kubernetes">A Zookeeper ensemble over Kubernetes !</a></li>
+<li><a class="reference internal" href="#a-real-zookeeper-ensemble-over-kubernetes">A real Zookeeper ensemble over Kubernetes !</a></li>
 </ul>
 </li>
 </ul>
