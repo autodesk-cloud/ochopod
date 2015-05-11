@@ -135,7 +135,8 @@ class Actor(FSM, Reactive):
         # - start spinning (the watcher updates will be processed in there)
         #
         self.watchers += [Remote.start(self.actor_ref, self.zk, self.scope, tag) for tag in self.depends_on]
-        logger.debug('%s : watching %s.%s (%d dependencies)' % (self.path, self.scope, self.tag, len(self.depends_on)))
+        logger.debug('%s : watching %d dependencies' % (self.path, len(self.depends_on)))
+        logger.info('%s : leading for cluster %s.%s' % (self.path, self.scope, self.tag))
         return 'spin', data, 0
 
     def spin(self, data):
@@ -201,7 +202,7 @@ class Actor(FSM, Reactive):
                     #
                     # - pass the latest cluster data to the probe() call
                     # - if successful (e.g did not assert) set the status to whatever the callable returned
-                    # - unset if None
+                    # - unset if nothing was returned
                     #
                     snippet = self.probe(_Cluster(data.last))
                     self.hints['status'] = str(snippet) if snippet else ''
@@ -216,12 +217,13 @@ class Actor(FSM, Reactive):
                 except Exception as failure:
 
                     #
-                    # -
+                    # - something blew up in probe(), set the status accordingly
                     #
                     self.hints['status'] = '* probe() failed (check the code)'
                     logger.warning('%s : probe() failed -> %s' % (self.path, diagnostic(failure)))
 
-                data.next_probe = data.next_probe + self.probe_every
+                logger.debug('%s : probe() -> "%s"' % (self.path, self.hints['status']))
+                data.next_probe = now + self.probe_every
 
         else:
 

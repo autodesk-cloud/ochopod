@@ -295,7 +295,7 @@ class Reactive(Model):
     """
 
     #: Delay in seconds between two probes
-    probe_every = 1.0
+    probe_every = 60.0
 
     #: Damper in seconds, e.g how long does the leader pod waits after spotting changes and before configuring.
     #: It is *strongly* advised to set it to something reasonable (30 seconds ?) whenever forming clusters.
