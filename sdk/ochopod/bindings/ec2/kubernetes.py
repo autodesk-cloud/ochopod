@@ -64,11 +64,13 @@ class Pod(EC2Kubernetes):
         #
         env = \
             {
+                'ochopod_application': '',
                 'ochopod_cluster': '',
                 'ochopod_debug': 'true',
                 'ochopod_local': 'false',
                 'ochopod_namespace': 'default',
-                'ochopod_port': '8080'
+                'ochopod_port': '8080',
+                'ochopod_task': ''
             }
 
         env.update(os.environ)
@@ -90,9 +92,10 @@ class Pod(EC2Kubernetes):
                 logger.info('running in local mode (make sure you run a standalone zookeeper)')
                 hints.update(
                     {
+                        'fwk': 'kubernetes',
+                        'ip': '127.0.0.1',
                         'node': 'localhost',
                         'public': '127.0.0.1',
-                        'ip': '127.0.0.1',
                         'zk': '127.0.0.1:2181'
                     })
             else:
@@ -154,20 +157,17 @@ class Pod(EC2Kubernetes):
 
                 #
                 # - set 'task' to $HOSTNAME (the container is named after the k8s pod)
-                #
-                hints.update(
-                    {
-                        'fwk': 'kubernetes',
-                        'ports': ports,
-                        'task': env['HOSTNAME']
-                    })
-
-                #
                 # - get our public IPV4 address
                 # - the "node" will show up as the EC2 instance ID
                 #
-                hints['public'] = _aws('public-ipv4')
-                hints['node'] = _aws('instance-id')
+                hints.update(
+                    {
+                        'fwk': 'k8s-ec2',
+                        'node': _aws('instance-id'),
+                        'ports': ports,
+                        'public': _aws('public-ipv4'),
+                        'task': env['HOSTNAME']
+                    })
 
                 #
                 # - look the k8s "ocho-proxy" pod up
@@ -233,6 +233,7 @@ class Pod(EC2Kubernetes):
                         'process',
                         'public',
                         'state',
+                        'status',
                         'task'
                     ]
 

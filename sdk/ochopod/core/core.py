@@ -256,7 +256,7 @@ class Coordinator(ZK):
             # - start the controller actor
             #
             data.latch = ThreadingFuture()
-            data.controller = self.model.start(data.zk, self.hints, self.scope, self.tag, self.port, data.latch)
+            data.controller = self.model.start(data.zk, self.id, self.hints, self.scope, self.tag, self.port, data.latch)
             return 'lock', data, 0
 
         except LockTimeout:

@@ -27,6 +27,7 @@ from kazoo.exceptions import NoNodeError, NodeExistsError
 from ochopod.api import Reactive
 from ochopod.core.core import ROOT, SAMPLING
 from ochopod.core.fsm import Aborted, FSM, diagnostic, shutdown
+from ochopod.models.piped import _Cluster
 from ochopod.watchers.local import Watcher as Local
 from ochopod.watchers.remote import Watcher as Remote
 from threading import Thread
@@ -78,10 +79,11 @@ class Actor(FSM, Reactive):
     the same Kazoo driver.
     """
 
-    def __init__(self, zk, hints, scope, tag, port, latch):
+    def __init__(self, zk, id, hints, scope, tag, port, latch):
         super(Actor, self).__init__()
 
         self.hints = hints
+        self.id = id
         self.latches.append(latch)
         self.path = 'model (reactive)'
         self.port = port
@@ -100,6 +102,7 @@ class Actor(FSM, Reactive):
         for watcher in self.watchers:
             shutdown(watcher)
 
+        self.hints['status'] = ''
         super(Actor, self).reset(data)
 
     def initial(self, data):
@@ -121,6 +124,8 @@ class Actor(FSM, Reactive):
         #   information on a regular basis
         #
         data.dirty = 0
+        data.next_probe = 0
+        data.last = None
         self.snapshots['local'] = {}
         self.watchers = [Local.start(self.actor_ref, self.zk, self.scope, self.tag)]
 
@@ -141,7 +146,11 @@ class Actor(FSM, Reactive):
         #
         if self.terminate:
             raise Aborted('terminating')
-
+        
+        #
+        # - if it is time to run the probe callback do it now
+        # - schedule the next one
+        #
         now = time.time()
         if self.updated:
 
@@ -183,8 +192,36 @@ class Actor(FSM, Reactive):
             #
             # - all cool, the cluster is configured
             # - set the state as 'leader'
+            # - fire a probe() if it is time
             #
             self.hints['state'] = 'leader'
+            if data.last and now > data.next_probe:
+                try:
+
+                    #
+                    # - pass the latest cluster data to the probe() call
+                    # - if successful (e.g did not assert) set the status to whatever the callable returned
+                    # - unset if None
+                    #
+                    snippet = self.probe(_Cluster(data.last))
+                    self.hints['status'] = str(snippet) if snippet else ''
+
+                except AssertionError as failure:
+
+                    #
+                    # - set the status to the assert message
+                    #
+                    self.hints['status'] = '* %s' % failure
+
+                except Exception as failure:
+
+                    #
+                    # -
+                    #
+                    self.hints['status'] = '* probe() failed (check the code)'
+                    logger.warning('%s : probe() failed -> %s' % (self.path, diagnostic(failure)))
+
+                data.next_probe = data.next_probe + self.probe_every
 
         else:
 
@@ -192,6 +229,7 @@ class Actor(FSM, Reactive):
             # - trigger the configuration procedure
             #
             self.hints['state'] = 'leader (configuration pending)'
+            self.hints['status'] = '* configuration pending'
             remaining = max(0, data.next - now)
             if not remaining:
                 return 'config', data, 0
@@ -204,6 +242,9 @@ class Actor(FSM, Reactive):
 
         return 'spin', data, SAMPLING
 
+    def probe(self, cluster):
+        pass
+
     def config(self, data):
 
         try:
@@ -213,6 +254,7 @@ class Actor(FSM, Reactive):
             # - order the dict to make sure we always assign the same index to the same pod
             # - unroll our pods into one URL list
             #
+            data.last = None
             self.hints['state'] = 'leader (configuring)'
             pods = self.snapshots['local']
 
@@ -328,9 +370,12 @@ class Actor(FSM, Reactive):
 
             #
             # - all cool, we can now unset our trigger
+            # - keep track of the cluster description
             # - go back to spinning
             #
             data.dirty = 0
+            data.last = js
+            data.last['key'] = str(self.id)
 
         except AssertionError as failure:
 
@@ -341,6 +386,7 @@ class Actor(FSM, Reactive):
             logger.warn('%s : configuration failed -> %s' % (self.path, diagnostic(failure)))
             self.hints['state'] = 'leader (configuration pending)'
             data.next = time.time() + self.damper
+            data.last = None
 
         return 'spin', data, SAMPLING
 

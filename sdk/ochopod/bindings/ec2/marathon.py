@@ -65,13 +65,13 @@ class Pod(EC2Marathon):
         #
         env = \
             {
+                'ochopod_application': '',
                 'ochopod_cluster': '',
                 'ochopod_debug': 'false',
                 'ochopod_local': 'false',
                 'ochopod_namespace': 'marathon',
                 'ochopod_port': '8080',
-                'MESOS_TASK_ID': '',
-                'MARATHON_APP_ID': '/local',
+                'ochopod_task': '',
                 'PORT_8080': '8080'
             }
 
@@ -95,14 +95,6 @@ class Pod(EC2Marathon):
             # - the ip and zookeeper are defaulted to localhost to enable easy testing
             #
             hints = {k[8:]: v for k, v in env.items() if k.startswith('ochopod_')}
-            hints.update(
-                {
-                    'fwk': 'mesos+marathon',
-                    'application': env['MARATHON_APP_ID'][1:],
-                    'task': env['MESOS_TASK_ID'],
-                    'ports': ports,
-                })
-
             if local or hints['local'] == 'true':
 
                 #
@@ -112,9 +104,11 @@ class Pod(EC2Marathon):
                 logger.info('running in local mode (make sure you run a standalone zookeeper)')
                 hints.update(
                     {
-                        'node': 'local',
-                        'public': '127.0.0.1',
+                        'fwk': 'mesos+marathon',
                         'ip': '127.0.0.1',
+                        'node': 'local',
+                        'ports': ports,
+                        'public': '127.0.0.1',
                         'zk': '127.0.0.1:2181'
                     })
             else:
@@ -132,9 +126,16 @@ class Pod(EC2Marathon):
                 # - get our local and public IPV4 addresses
                 # - the "node" will show up as the EC2 instance ID
                 #
-                hints['ip'] = _peek('local-ipv4')
-                hints['public'] = _peek('public-ipv4')
-                hints['node'] = _peek('instance-id')
+                hints.update(
+                    {
+                        'application': env['MARATHON_APP_ID'][1:],
+                        'fwk': 'marathon-ec2',
+                        'ip': _peek('local-ipv4'),
+                        'node': _peek('instance-id'),
+                        'ports': ports,
+                        'public': _peek('public-ipv4'),
+                        'task': env['MESOS_TASK_ID']
+                    })
 
                 #
                 # - the underlying /etc/mesos is assumed to be mounted
@@ -206,6 +207,7 @@ class Pod(EC2Marathon):
                         'process',
                         'public',
                         'state',
+                        'status',
                         'task'
                     ]
 

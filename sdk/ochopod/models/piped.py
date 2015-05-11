@@ -30,9 +30,6 @@ from subprocess import Popen
 #: Our ochopod logger.
 logger = logging.getLogger('ochopod')
 
-#: Delay in seconds between two health-checks.
-SANITY = 5.0
-
 
 class _Cluster(Cluster):
     """
@@ -228,7 +225,7 @@ class Actor(FSM, Piped):
                     # - the process died on a non zero exit code
                     # - restart it gracefully
                     #
-                    logger.info('%s : pid %s died (code %d), re-running' % (self.path, data.forked.pid, code))
+                    logger.error('%s : pid %s died (code %d), re-running' % (self.path, data.forked.pid, code))
                     self._request(['off', 'on'])
 
             elif now >= data.next_sanity_check:
@@ -238,7 +235,7 @@ class Actor(FSM, Piped):
                     # - run the sanity check and schedule the next one
                     # - reset it each time
                     #
-                    data.next_sanity_check = now + SANITY
+                    data.next_sanity_check = now + self.check_every
                     self.sanity_check(data.forked.pid)
                     data.checks = self.checks
                     
@@ -328,7 +325,7 @@ class Actor(FSM, Piped):
                     logger.debug('%s : extra environment for pid %s ->\n%s' % (self.path, data.forked.pid, unrolled))
 
                 reply = {}, 200
-                data.next_sanity_check = now + SANITY
+                data.next_sanity_check = now + self.check_every
                 data.latch.set(reply)
 
             except Exception as failure:
