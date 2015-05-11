@@ -83,8 +83,8 @@ specific to <a class="reference external" href="http://mesos.apache.org/">Mesos<
 some higher-level model.</p>
 <p>Ochopod is meant to be used on top of modern resourcing technologies. Our stack is made of three distinct
 layers : a pool of resources (either virtualized or bare-metal), the resourcing layer (<a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> or <a class="reference external" href="http://mesos.apache.org/">Mesos</a> plus one
-or more frameworks such as <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> or <a class="reference external" href="http://aurora.incubator.apache.org/">Aurora</a>) and finally the application layer on top (e.g <a class="reference external" href="https://www.docker.com/">Docker</a> and whatever
-runs in the containers).</p>
+or more frameworks such as <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a>) and finally the application layer on top (e.g <a class="reference external" href="https://www.docker.com/">Docker</a> and whatever runs in the
+containers).</p>
 <div class="figure align-center">
 <a class="reference internal image-reference" href="_images/stack.png"><img alt="_images/stack.png" src="_images/stack.png" style="width: 45%;" /></a>
 </div>
@@ -221,6 +221,7 @@ For instance:</p>
     <span class="s">&quot;process&quot;</span><span class="p">:</span> <span class="s">&quot;running&quot;</span><span class="p">,</span>
     <span class="s">&quot;ip&quot;</span><span class="p">:</span> <span class="s">&quot;10.181.100.14&quot;</span><span class="p">,</span>
     <span class="s">&quot;public&quot;</span><span class="p">:</span> <span class="s">&quot;54.224.203.40&quot;</span><span class="p">,</span>
+    <span class="s">&quot;status&quot;</span><span class="p">:</span> <span class="s">&quot;&quot;</span><span class="p">,</span>
     <span class="s">&quot;ports&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s">&quot;8080&quot;</span><span class="p">:</span> <span class="mi">1025</span><span class="p">,</span>
         <span class="s">&quot;9000&quot;</span><span class="p">:</span> <span class="mi">1026</span>
@@ -230,6 +231,8 @@ For instance:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>The <em>status</em> setting is an arbitrary string that may be set by a leader pod to indicate general information about the
+cluster.</p>
 <p>The <strong>POST /control/signal</strong> request is a generic placeholder for out-the-band logic. Take for instance the case where
 you need to switch your web-tier into a special mode or maybe update your load-balancer configuration on the fly. This
 can be neatly packaged in your pod script and activated using a single HTTP request.</p>
@@ -249,6 +252,13 @@ implemented by sending a SIGTERM and waiting for the sub-process to terminate (f
 its logs). Additional requests are also supported to manually restart the sub-process or turn it on/off. During
 re-configuration any pod tagged as dead will be skipped silently and therefore not seen by its peers.</p>
 </div>
+<div class="section" id="assessing-health">
+<h3>Assessing health<a class="headerlink" href="#assessing-health" title="Permalink to this headline">¶</a></h3>
+<p>We propose two ways to gauge whether or not the system behaves as expected : an optional <em>sanity check</em> run by each pod
+and focusing on the process it manages and an optional <em>probe</em> that is run by the leader pod only and is meant to check
+on the whole cluster.</p>
+<p>Both checks are implemented as callbacks and can be run at varying frequency.</p>
+</div>
 </div>
 <div class="section" id="framework-bindings">
 <h2>Framework bindings<a class="headerlink" href="#framework-bindings" title="Permalink to this headline">¶</a></h2>
@@ -260,10 +270,11 @@ is typically built on top by defining custom tools and taking advantage of each 
 <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> offers enough semantics with its application REST API to implement a simple CI/CD pipeline.</p>
 <p>Our pods transport 2 dedicated hints : <strong>application</strong> and <strong>task</strong>. The <strong>application</strong> identifies the high-level
 construct through which the pod was created (for instance a <em>replication controller</em> in the <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> case). The
-<strong>task</strong> identifies the pod itself in the underlying stack.</p>
+<strong>task</strong> identifies the pod itself in the underlying stack. Those concepts should not really matter for you and are
+only relevant to the tooling infrastructure interfacing with <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> or <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a>.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">We only offer bindings to run over <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> and <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> over EC2 at this point.</p>
+<p class="last">We only offer bindings to run over <a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a> and <a class="reference external" href="https://mesosphere.github.io/marathon/">Marathon</a> over AWS EC2 at this point.</p>
 </div>
 </div>
 </div>
@@ -292,6 +303,7 @@ construct through which the pod was created (for instance a <em>replication cont
 <li><a class="reference internal" href="#registration">Registration</a></li>
 <li><a class="reference internal" href="#http-i-o">HTTP I/O</a></li>
 <li><a class="reference internal" href="#the-state-machine">The state-machine</a></li>
+<li><a class="reference internal" href="#assessing-health">Assessing health</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#framework-bindings">Framework bindings</a></li>

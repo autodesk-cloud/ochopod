@@ -141,7 +141,8 @@ end up forming a functional cluster).</p>
 <dl class="class">
 <dt id="api.Cluster">
 <em class="property">class </em><code class="descclassname">api.</code><code class="descname">Cluster</code><a class="headerlink" href="#api.Cluster" title="Permalink to this definition">¶</a></dt>
-<dd><p>Cluster description including dependencies. This is what is passed down to you when the pod needs to be configured.</p>
+<dd><p>Cluster description including dependencies. This is what is passed down to you when the pod needs to be configured
+or when a probe() callback is invoked.</p>
 <p>The <a class="reference internal" href="#api.Cluster.pods" title="api.Cluster.pods"><code class="xref py py-attr docutils literal"><span class="pre">pods</span></code></a> and <a class="reference internal" href="#api.Cluster.dependencies" title="api.Cluster.dependencies"><code class="xref py py-attr docutils literal"><span class="pre">dependencies</span></code></a> dicts contain the registration payload for a set of pods. The keys do
 not really matter (they are random and unique). The payload describes things such as where the pods run, what
 their underlying task identifier is and so on. For instance:</p>
@@ -152,7 +153,7 @@ their underlying task identifier is and so on. For instance:</p>
     &quot;node&quot;: &quot;i-d5d1b53a&quot;,
     &quot;seq&quot;: 19,
     &quot;zk&quot;: &quot;10.181.124.223:2181&quot;,
-    &quot;binding&quot;: &quot;marathon&quot;,
+    &quot;binding&quot;: &quot;marathon-ec2&quot;,
     &quot;namespace&quot;: &quot;my-service&quot;,
     &quot;port&quot;: &quot;8080&quot;,
     &quot;cluster&quot;: &quot;database&quot;,
@@ -160,6 +161,7 @@ their underlying task identifier is and so on. For instance:</p>
     &quot;debug&quot;: &quot;true&quot;,
     &quot;local&quot;: &quot;false&quot;,
     &quot;public&quot;: &quot;54.145.22.4&quot;,
+    &quot;status&quot;: &quot;&quot;,
     &quot;ports&quot;:
     {
         &quot;8080&quot;: 1024
@@ -438,7 +440,7 @@ callback. To import its actor implementation do something like:</p>
 <dl class="attribute">
 <dt id="api.Piped.checks">
 <code class="descname">checks</code><em class="property"> = 1</em><a class="headerlink" href="#api.Piped.checks" title="Permalink to this definition">¶</a></dt>
-<dd><p>Number of (optional) sanity checks we can afford to fail before.</p>
+<dd><p>Number of (optional) sanity checks we can afford to fail before resetting the sub-process.</p>
 </dd></dl>
 
 <dl class="attribute">
