@@ -104,7 +104,7 @@ class Pod(EC2Marathon):
                 logger.info('running in local mode (make sure you run a standalone zookeeper)')
                 hints.update(
                     {
-                        'fwk': 'mesos+marathon',
+                        'fwk': 'marathon-ec2',
                         'ip': '127.0.0.1',
                         'node': 'local',
                         'ports': ports,
@@ -125,6 +125,10 @@ class Pod(EC2Marathon):
                 #
                 # - get our local and public IPV4 addresses
                 # - the "node" will show up as the EC2 instance ID
+                # - depending on how the slave has been installed we might have to look in various places
+                #   to find out what our zookeeper connection string is
+                # - warning, a URL like format such as zk://<ip:port>,..,<ip:port>/mesos is used
+                # - just keep the ip & port part and discard the rest
                 #
                 hints.update(
                     {
@@ -134,18 +138,37 @@ class Pod(EC2Marathon):
                         'node': _peek('instance-id'),
                         'ports': ports,
                         'public': _peek('public-ipv4'),
-                        'task': env['MESOS_TASK_ID']
+                        'task': env['MESOS_TASK_ID'],
+                        'zk': ''
                     })
 
-                #
-                # - the underlying /etc/mesos is assumed to be mounted
-                # - go in there fetch our zookeeper connection string
-                # - warning, the connection string mesos uses is formatted like zk://<ip:port>,..,<ip:port>/mesos
-                # - just keep the ip & port part
-                #
-                code, lines = shell("cat /etc/mesos/zk")
-                assert code is 0, 'could not read from /etc/mesos (are you mounting it ?)'
-                hints['zk'] = lines[0][5:].split('/')[0]
+                def _install_from_package():
+
+                    #
+                    # - a regular install via the mesosphere package will write the slave settings
+                    #   under /etc/mesos/zk
+                    #
+                    _, lines = shell("cat /etc/mesos/zk")
+                    return lines[0][5:].split('/')[0]
+
+                def _mesosphere_deployment():
+
+                    #
+                    # - a DCOS slave is setup slightly differently with the settings being environment
+                    #   variables set in /opt/mesosphere/etc/mesos-slave
+                    # - the actual snippet is something like MESOS_MASTER=zk://leader.mesos:2181/mesos
+                    #
+                    _, lines = shell("grep MASTER /opt/mesosphere/etc/mesos-slave")
+                    return lines[0][18:].split('/')[0]
+
+                for method in [_install_from_package, _mesosphere_deployment]:
+                    try:
+                        hints['zk'] = method()
+
+                    except:
+                        pass
+
+                assert hints['zk'], 'unable to determine where zookeeper is located (unsupported/bogus setup ?)'
 
             #
             # - the cluster must be fully qualified with a namespace (which is defaulted anyway)
