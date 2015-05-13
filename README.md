@@ -30,7 +30,7 @@ On a similar note [**Ochonetes**](https://github.com/autodesk-cloud/ochonetes) w
 
 In case you had not noticed you can build this repo as a Docker image ! This will give you a basic Ubuntu container
 that includes our code, Python 2.7 and the handy supervisor package. You can find it on the
-[**Docker hub**](https://registry.hub.docker.com/) as the _paugamo/pod_ image.
+[**Docker hub**](https://registry.hub.docker.com/) as the _autodeskcloud/pod_ image. It is tagged with release numbers.
 
 ### Documentation
 
