@@ -18,6 +18,9 @@ Please have a look at our [**Ochothon**](https://github.com/autodesk-cloud/ochot
 quick PaaS on top of [**Marathon**](https://mesosphere.github.io/marathon/) including a comprehensive tool suite, a
 cool web-shell, a tiny cli and more !
 
+Both a manual package install and the spiffy [**DCOS deployments from Mesosphere**](https://mesosphere.com/) have been
+tested.
+
 ### Ochopod + K8S
 
 On a similar note [**Ochonetes**](https://github.com/autodesk-cloud/ochonetes) will run on top of a
