@@ -124,8 +124,8 @@ class Actor(FSM, Reactive):
         #   information on a regular basis
         #
         data.dirty = 0
-        data.next_probe = 0
         data.last = None
+        data.next_probe = 0
         self.snapshots['local'] = {}
         self.watchers = [Local.start(self.actor_ref, self.zk, self.scope, self.tag)]
 
@@ -182,9 +182,18 @@ class Actor(FSM, Reactive):
                 # - this case would typically map to a pod losing cnx to zk and joining again later
                 # - based on how much damper we allow we can bridge transient idempotent changes
                 # - very important -> make sure we set the snapshot (which could have been reset to {})
+                # - don't also forget to set data.last to enable probing
                 #
                 data.dirty = 0
                 pods = self.snapshots['local']
+                js = \
+                    {
+                        'pods': pods,
+                        'dependencies': {k: v for k, v in self.snapshots.items() if k != 'local'}
+                    }
+
+                data.last = js
+                data.last['key'] = str(self.id)
                 self.zk.set('%s/%s.%s/snapshot' % (ROOT, self.scope, self.tag), json.dumps(pods))
                 logger.debug('%s : pod update with no hash impact (did we just reconnect to zk ?)' % self.path)
 
@@ -193,7 +202,7 @@ class Actor(FSM, Reactive):
             #
             # - all cool, the cluster is configured
             # - set the state as 'leader'
-            # - fire a probe() if it is time
+            # - fire a probe() if it is time to do so
             #
             self.hints['state'] = 'leader'
             if data.last and now > data.next_probe:
@@ -231,8 +240,8 @@ class Actor(FSM, Reactive):
             # - trigger the configuration procedure
             #
             self.hints['state'] = 'leader (configuration pending)'
-            self.hints['status'] = '* configuration pending'
             remaining = max(0, data.next - now)
+            self.hints['status'] = '* configuration in %2.1f seconds' % remaining
             if not remaining:
                 return 'config', data, 0
 
@@ -257,8 +266,9 @@ class Actor(FSM, Reactive):
             # - unroll our pods into one URL list
             #
             data.last = None
-            self.hints['state'] = 'leader (configuring)'
             pods = self.snapshots['local']
+            self.hints['state'] = 'leader (configuring)'
+            self.hints['status'] = '* configuring %d pods' % len(pods)
 
             #
             # - map each pod to its full control URL

@@ -66,8 +66,8 @@ class Pod(EC2Marathon):
         env = \
             {
                 'ochopod_application': '',
-                'ochopod_cluster': '',
-                'ochopod_debug': 'false',
+                'ochopod_cluster': 'default',
+                'ochopod_debug': 'true',
                 'ochopod_local': 'false',
                 'ochopod_namespace': 'marathon',
                 'ochopod_port': '8080',
@@ -125,10 +125,6 @@ class Pod(EC2Marathon):
                 #
                 # - get our local and public IPV4 addresses
                 # - the "node" will show up as the EC2 instance ID
-                # - depending on how the slave has been installed we might have to look in various places
-                #   to find out what our zookeeper connection string is
-                # - warning, a URL like format such as zk://<ip:port>,..,<ip:port>/mesos is used
-                # - just keep the ip & port part and discard the rest
                 #
                 hints.update(
                     {
@@ -145,25 +141,33 @@ class Pod(EC2Marathon):
                 def _install_from_package():
 
                     #
-                    # - a regular install via the mesosphere package will write the slave settings
-                    #   under /etc/mesos/zk
+                    # - a regular package install will write the slave settings under /etc/mesos/zk
+                    # - the snippet in there looks like zk://10.0.0.56:2181/mesos
                     #
                     _, lines = shell("cat /etc/mesos/zk")
                     return lines[0][5:].split('/')[0]
 
-                def _mesosphere_deployment():
+                def _dcos_deployment():
 
                     #
                     # - a DCOS slave is setup slightly differently with the settings being environment
                     #   variables set in /opt/mesosphere/etc/mesos-slave
-                    # - the actual snippet is something like MESOS_MASTER=zk://leader.mesos:2181/mesos
+                    # - the snippet in there is prefixed by MESOS_MASTER= and uses an alias
+                    # - it looks like MESOS_MASTER=zk://leader.mesos:2181/mesos
                     #
                     _, lines = shell("grep MASTER /opt/mesosphere/etc/mesos-slave")
                     return lines[0][18:].split('/')[0]
 
-                for method in [_install_from_package, _mesosphere_deployment]:
+                #
+                # - depending on how the slave has been installed we might have to look in various places
+                #   to find out what our zookeeper connection string is
+                # - warning, a URL like format such as zk://<ip:port>,..,<ip:port>/mesos is used
+                # - just keep the ip & port part and discard the rest
+                #
+                for method in [_install_from_package, _dcos_deployment]:
                     try:
                         hints['zk'] = method()
+                        break
 
                     except:
                         pass
@@ -172,12 +176,8 @@ class Pod(EC2Marathon):
 
             #
             # - the cluster must be fully qualified with a namespace (which is defaulted anyway)
-            # - if the cluster is not specified use the marathon application identifier as a fallback
             #
-            assert hints['namespace'], 'no cluster namespace defined (user error ?)'
-            if not hints['cluster']:
-                logger.debug('cluster identified not defined, falling back on %s' % hints['application'])
-                hints['cluster'] = hints['application']
+            assert hints['cluster'] and hints['namespace'], 'no cluster and/or namespace defined (user error ?)'
 
             #
             # - start the life-cycle actor which will pass our hints (as a json object) to its underlying sub-process
