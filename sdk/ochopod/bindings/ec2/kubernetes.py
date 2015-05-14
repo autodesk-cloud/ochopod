@@ -70,6 +70,7 @@ class Pod(EC2Kubernetes):
                 'ochopod_local': 'false',
                 'ochopod_namespace': 'default',
                 'ochopod_port': '8080',
+                'ochopod_start': 'true',
                 'ochopod_task': ''
             }
 

@@ -71,6 +71,7 @@ class Pod(EC2Marathon):
                 'ochopod_local': 'false',
                 'ochopod_namespace': 'marathon',
                 'ochopod_port': '8080',
+                'ochopod_start': 'true',
                 'ochopod_task': '',
                 'PORT_8080': '8080'
             }

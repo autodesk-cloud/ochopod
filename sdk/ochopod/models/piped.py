@@ -77,6 +77,7 @@ class Actor(FSM, Piped):
         self.last = {}
         self.latches.append(latch)
         self.path = 'lifecycle (piped process)'
+        self.start = hints['start'] == 'true'
         self.terminate = 0
 
     def initialize(self):
@@ -110,6 +111,7 @@ class Actor(FSM, Piped):
 
         data.command = None
         data.forked = None
+        data.pids = 0
         data.js = {}
         data.next_sanity_check = 0
         return 'spin', data, 0
@@ -307,22 +309,29 @@ class Actor(FSM, Piped):
                 assert data.command, 'request to start process while not yet configured (user error ?)'
 
                 #
-                # - combine our environment variables with the overrides from configure()
-                # - popen() the new process
-                # - reset the sanity check counter
-                # - keep track of its pid to kill it later on
+                # - spawn a new sub-process if the auto-start flag is on OR if we already ran at least once
+                # - the start flag comes from the $ochopod_start environment variable
                 #
                 now = time.time()
-                env = deepcopy(self.env)
-                env.update(data.env)
-                tokens = data.command if self.shell else data.command.split(' ')
-                data.forked = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell)
-                data.checks = self.checks
-                self.hints['process'] = 'running'
-                logger.info('%s : started <%s> as pid %s' % (self.path, data.command, data.forked.pid))
-                if data.env:
-                    unrolled = '\n'.join(['\t%s -> %s' % (k, v) for k, v in data.env.items()])
-                    logger.debug('%s : extra environment for pid %s ->\n%s' % (self.path, data.forked.pid, unrolled))
+                if self.start or data.pids > 0:
+
+                    #
+                    # - combine our environment variables with the overrides from configure()
+                    # - popen() the new process
+                    # - reset the sanity check counter
+                    # - keep track of its pid to kill it later on
+                    #
+                    env = deepcopy(self.env)
+                    env.update(data.env)
+                    tokens = data.command if self.shell else data.command.split(' ')
+                    data.forked = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell)
+                    data.checks = self.checks
+                    data.pids += 1
+                    self.hints['process'] = 'running'
+                    logger.info('%s : popen() #%s -> started <%s> as pid %s' % (self.path, data.pids, data.command, data.forked.pid))
+                    if data.env:
+                        unrolled = '\n'.join(['\t%s -> %s' % (k, v) for k, v in data.env.items()])
+                        logger.debug('%s : extra environment for pid %s ->\n%s' % (self.path, data.forked.pid, unrolled))
 
                 reply = {}, 200
                 data.next_sanity_check = now + self.check_every
