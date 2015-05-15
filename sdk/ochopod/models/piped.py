@@ -313,7 +313,7 @@ class Actor(FSM, Piped):
                 # - the start flag comes from the $ochopod_start environment variable
                 #
                 now = time.time()
-                if self.start or data.pids > 0:
+                if not data.js or self.start or data.pids > 0:
 
                     #
                     # - combine our environment variables with the overrides from configure()
