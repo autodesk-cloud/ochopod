@@ -231,8 +231,9 @@ class Actor(FSM, Reactive):
                     self.hints['status'] = '* probe() failed (check the code)'
                     logger.warning('%s : probe() failed -> %s' % (self.path, diagnostic(failure)))
 
-                logger.debug('%s : probe() -> "%s"' % (self.path, self.hints['status']))
                 data.next_probe = now + self.probe_every
+                if self.hints['status']:
+                    logger.debug('%s : probe() -> "%s"' % (self.path, self.hints['status']))
 
         else:
 
@@ -383,11 +384,12 @@ class Actor(FSM, Reactive):
             #
             # - all cool, we can now unset our trigger
             # - keep track of the cluster description
-            # - go back to spinning
+            # - go back to spinning & force a call to probe() right away
             #
             data.dirty = 0
             data.last = js
             data.last['key'] = str(self.id)
+            data.next_probe = 0
 
         except AssertionError as failure:
 

@@ -139,7 +139,7 @@ class ZK(FSM):
             path = data.zk.create('%s/pods/%s.' % (self.prefix, self.id), ephemeral=True, sequence=True)
             tokens = path.split('.')
             latest = int(tokens[-1])
-            if not self.seq:
+            if self.seq is None:
                 self.seq = latest
             self.breadcrumbs['seq'] = self.seq
             js = json.dumps(self.breadcrumbs)
