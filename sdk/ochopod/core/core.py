@@ -135,12 +135,12 @@ class ZK(FSM):
             # - this is where we can store arbitrary information (e.g our breadcrumbs)
             # - we ask for a sequence counter as well which we then keep (e.g in case of connection loss or reset
             #   we guarantee the pod won't get assigned a new index)
+            # - this is *critical* for some use-cases (e.g Kafka where the broker index must remain the same)
             #
             path = data.zk.create('%s/pods/%s.' % (self.prefix, self.id), ephemeral=True, sequence=True)
             tokens = path.split('.')
-            latest = int(tokens[-1])
             if self.seq is None:
-                self.seq = latest
+                self.seq = int(tokens[-1])
             self.breadcrumbs['seq'] = self.seq
             js = json.dumps(self.breadcrumbs)
             data.zk.set(path, js)
