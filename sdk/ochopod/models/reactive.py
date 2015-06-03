@@ -30,6 +30,7 @@ from ochopod.core.fsm import Aborted, FSM, diagnostic, shutdown
 from ochopod.models.piped import _Cluster
 from ochopod.watchers.local import Watcher as Local
 from ochopod.watchers.remote import Watcher as Remote
+from requests.exceptions import Timeout
 from threading import Thread
 
 #: Our ochopod logger.
@@ -64,8 +65,13 @@ class _Post(Thread):
             self.code = reply.status_code
             logger.debug('control <- %s (HTTP %d)' % (self.url, self.code))
 
-        except Exception:
-            pass
+        except Timeout:
+
+            #
+            # - just log something
+            # - the thread will simply return a None for return code
+            #
+            logger.debug('control <- %s (timeout)' % self.url)
 
     def join(self, timeout=None):
 
@@ -350,7 +356,7 @@ class Actor(FSM, Reactive):
                     del pods[key]
                     del urls[key]
 
-            assert all(code in [200, 410] for key, code in replies), '1+ pods failed the pre-check'
+            assert all(code in [200, 410] for _, code in replies), '1+ pods failing the pre-check or unreachable'
             if pods:
 
                 #
@@ -368,7 +374,7 @@ class Actor(FSM, Reactive):
                 logger.debug('%s : json payload ->\n%s' % (self.path, json.dumps(js, indent=4, separators=(',', ': '))))
                 logger.info('%s : asking %d pods to configure' % (self.path, len(pods)))
                 replies = _control('on')
-                assert all(code == 200 for _, code in replies), '1+ pods failed to configure'
+                assert all(code == 200 for _, code in replies), '1+ pods failing to configure or unreachable'
 
             #
             # - in any case update the md5 hash

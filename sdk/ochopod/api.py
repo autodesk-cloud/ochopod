@@ -331,10 +331,10 @@ class Piped(LifeCycle):
        from ochopod.models.piped import Actor as Piped
     """
 
-    #: Number of (optional) sanity checks we can afford to fail before resetting the sub-process.
+    #: Number of sanity checks we can afford to fail before turning the sub-process off.
     checks = 1
 
-    #: Delay in seconds between two sanity checks
+    #: Delay in seconds between two sanity checks.
     check_every = 60.0
 
     #: Optional working directory to explicitly enforce when running the sub-process. If not defined the
