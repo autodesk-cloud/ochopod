@@ -219,7 +219,14 @@ We propose two ways to gauge whether or not the system behaves as expected : an 
 and focusing on the process it manages and an optional *probe* that is run by the leader pod only and is meant to check
 on the whole cluster.
 
-Both checks are implemented as callbacks and can be run at varying frequency.
+Both checks are implemented as callbacks and can be run at varying frequency. The *sanity check* focuses on what the
+pod actually runs (e.g its sub-process) and can be customized any way you want (CURL the process, run a script, read
+some file, etc). Failure to run the sanity checks up to a configurable amount of retries will automatically turn the
+pod off (up to the user to turn it back on).
+
+.. note::
+    Any unexpected exit of the sub-process (e.g anything other than zero) will automatically fail the next sanity
+    check.
 
 Framework bindings
 __________________

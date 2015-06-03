@@ -257,7 +257,15 @@ re-configuration any pod tagged as dead will be skipped silently and therefore n
 <p>We propose two ways to gauge whether or not the system behaves as expected : an optional <em>sanity check</em> run by each pod
 and focusing on the process it manages and an optional <em>probe</em> that is run by the leader pod only and is meant to check
 on the whole cluster.</p>
-<p>Both checks are implemented as callbacks and can be run at varying frequency.</p>
+<p>Both checks are implemented as callbacks and can be run at varying frequency. The <em>sanity check</em> focuses on what the
+pod actually runs (e.g its sub-process) and can be customized any way you want (CURL the process, run a script, read
+some file, etc). Failure to run the sanity checks up to a configurable amount of retries will automatically turn the
+pod off (up to the user to turn it back on).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Any unexpected exit of the sub-process (e.g anything other than zero) will automatically fail the next sanity
+check.</p>
+</div>
 </div>
 </div>
 <div class="section" id="framework-bindings">
