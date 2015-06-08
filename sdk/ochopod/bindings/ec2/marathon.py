@@ -118,14 +118,15 @@ class Pod(EC2Marathon):
                 # - we are (assuming to be) deployed on EC2
                 # - get our underlying metadata using curl
                 #
-                def _peek(token):
+                def _peek(token, strict=True):
                     code, lines = shell('curl -f http://169.254.169.254/latest/meta-data/%s' % token)
-                    assert code is 0, 'unable to lookup EC2 metadata for %s (are you running on EC2 ?)' % token
+                    assert not strict or code is 0, 'unable to lookup EC2 metadata for %s (are you running on EC2 ?)' % token
                     return lines[0]
 
                 #
                 # - get our local and public IPV4 addresses
                 # - the "node" will show up as the EC2 instance ID
+                # - note we allow the public IPv4 lookup to fail (in case we run in VPC)
                 #
                 hints.update(
                     {
@@ -134,7 +135,7 @@ class Pod(EC2Marathon):
                         'ip': _peek('local-ipv4'),
                         'node': _peek('instance-id'),
                         'ports': ports,
-                        'public': _peek('public-ipv4'),
+                        'public': _peek('public-ipv4', strict=False),
                         'task': env['MESOS_TASK_ID'],
                         'zk': ''
                     })
