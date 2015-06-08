@@ -18,8 +18,8 @@ Please have a look at our [**Ochothon**](https://github.com/autodesk-cloud/ochot
 quick PaaS on top of [**Marathon**](https://mesosphere.github.io/marathon/) including a comprehensive tool suite, a
 cool web-shell, a tiny cli and more !
 
-Both a manual package install and the spiffy [**DCOS deployments from Mesosphere**](https://mesosphere.com/) have been
-tested.
+Both a manual package install and the spiffy [**DCOS deployments from Mesosphere**](https://mesosphere.com/) have
+been tested.
 
 ### Ochopod + K8S
 
@@ -29,8 +29,11 @@ On a similar note [**Ochonetes**](https://github.com/autodesk-cloud/ochonetes) w
 ### Your base image
 
 In case you had not noticed you can build this repo as a Docker image ! This will give you a basic Ubuntu container
-that includes our code, Python 2.7 and the handy supervisor package. You can find it on the
-[**Docker hub**](https://registry.hub.docker.com/) as the _autodeskcloud/pod_ image. It is tagged with release numbers.
+that includes our code, Python 2.7 and the handy supervisor package. We run supervisor as PID 1 and set it up to
+listen on TCP 8081 (not exposed).
+
+You can find it on the [**Docker hub**](https://registry.hub.docker.com/) as the _autodeskcloud/pod_ image (tagged
+with release numbers).
 
 ### Documentation
 
