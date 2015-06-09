@@ -1,0 +1,16 @@
+language: python
+python:
+  - '2.7'
+install:
+  - pip install -q -e sdk/.
+script:
+  - python sdk/setup.py test
+deploy:
+  provider: pypi
+  user: svoorhees
+  password:
+    secure: Tr6hcCIKsZ3L9dm/O9HhAa7UxGNMA2dpn2vNpDgIvCcBlNn3cdu8uvKW+tyY6rQncrsJwM/gi2Sw+hGBzyULoIFirbNTaS3BNeh4xcbtcwdOQsfRRRdb1OWsEVrvi1Q8NL99v4X5HErg8Pf8hOhYZg7TLwCzBR/OvQHnCv6xF00=
+  on:
+    tags: true
+    repo: autodesk-cloud/ochopod
+    branch: master
