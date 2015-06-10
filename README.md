@@ -1,4 +1,6 @@
-## Ochopod
+## Ochopod 
+
+[![Build Status](https://travis-ci.org/autodesk-cloud/ochopod.svg)](https://travis-ci.org/autodesk-cloud/ochopod)
 
 ### Overview
 
