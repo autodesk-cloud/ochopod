@@ -1,10 +1,10 @@
 language: python
 python:
-- '2.7'
+  - '2.7'
 install:
-- pip install -q -e sdk/.
+  - pip install -q -e sdk/.
 script:
-- python sdk/setup.py test
+  - python sdk/setup.py test
 deploy:
   provider: pypi
   user: svoorhees
