@@ -9,7 +9,7 @@ deploy:
   provider: pypi
   user: svoorhees
   password:
-    secure: Tr6hcCIKsZ3L9dm/O9HhAa7UxGNMA2dpn2vNpDgIvCcBlNn3cdu8uvKW+tyY6rQncrsJwM/gi2Sw+hGBzyULoIFirbNTaS3BNeh4xcbtcwdOQsfRRRdb1OWsEVrvi1Q8NL99v4X5HErg8Pf8hOhYZg7TLwCzBR/OvQHnCv6xF00=
+    secure: aj6qQVqC7TMEnQGlS6WXMP+Cnvu6Co/jRYxju9Mx5oxbS03/MjtAsTZ/rwYVj7cDgkeyf2IwhQpb2cfLOhCECakBw1t+onpYQkPsKirr2KUmx6ollT0Ep5pw+jx+B4He9DfLmoJHYLD1UQ//R1X99/lzH4truEaPzXL9bGC1bIIlyLAL5xofMRfpyemZ3mAiiFvQ8W23oi+B0aPurzJIxyfP+voa+psEQalPt9bWnrCzCJ+kf0q3DbkAxMtUYsrTcln7XYRRoVLkgsYBpGrYLNwv9+4pZCH/EWW1+UMEhfJMmCpQM9jpe4Sb4SCKpoHmx814ZVtcnHJqpFsPPFyUOKkhR9PFvIkWtagdnbbscQbahXHAjx1cQUCONZptxZXLLUTJFHF82tNvkUn1aR77K2pRSFTEXrMyV5kll97leRXZGz6UUQr91slKjjRDeHxcO9KNYer2Ydv9EqeGD0h7mDjn51cccbUn7RfOcO4ShsKYtTQHSlzzFTIw2Ajfd9dV+n1aCDWRQKBFuQCwuW3txD++zYdRhI6B/xEZeRKjIgOyCgmcL07QWzUm/rWuq9RN+JjeRnUfn+zao6bEUa6PGSl9OI+wy/Fq0kPArl8lU860kkuu4fg/FyXMOnQDV0QOfEF0Kvkzy4jwzOuei7eiE+j6gKXyoxkfGAOiqAoFw70=
   on:
     tags: true
     repo: autodesk-cloud/ochopod
