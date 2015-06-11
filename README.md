@@ -1,4 +1,6 @@
-## Ochopod
+## Ochopod 
+
+[![Build Status](https://travis-ci.org/autodesk-cloud/ochopod.svg)](https://travis-ci.org/autodesk-cloud/ochopod)
 
 ### Overview
 
@@ -6,21 +8,34 @@ This project is a small [**Python**](https://www.python.org/) package you can us
 [**Docker**](https://www.docker.com/) containers. It is configured to interface with
 [**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) or various [**Apache Mesos**](http://mesos.apache.org/)
 frameworks and coordinates how a given family of containers should cluster together at run-time. It transparently
-manages dependencies and port remapping as well.
+manages dependencies and port remapping as well. In short you effectively apply an _overlay_ to your provisioning stack
+that enables you to do _more_ !
 
 Ochopod internally relies on [**Apache Zookeeper**](http://zookeeper.apache.org/) for synchronization and metadata
 storage.
 
+### Ochopod + Mesos + Marathon
+
+Please have a look at our [**Ochothon**](https://github.com/autodesk-cloud/ochothon) stack and see how we built a
+quick PaaS on top of [**Marathon**](https://mesosphere.github.io/marathon/) including a comprehensive tool suite, a
+cool web-shell, a tiny cli and more !
+
+Both a manual package install and the spiffy [**DCOS deployments from Mesosphere**](https://mesosphere.com/) have
+been tested.
+
 ### Ochopod + K8S
 
-Please have a look at our [**Ochonetes**](https://github.com/autodesk-cloud/ochonetes) stack and see how we built a
-quick PaaS on top of [**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) including a full toolkit, a
-cool web-shell and more !
+On a similar note [**Ochonetes**](https://github.com/autodesk-cloud/ochonetes) will run on top of a
+[**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) stack and is equally cool !
 
 ### Your base image
 
 In case you had not noticed you can build this repo as a Docker image ! This will give you a basic Ubuntu container
-that includes our code, Python 2.7 and the handy supervisor package.
+that includes our code, Python 2.7 and the handy supervisor package. We run supervisor as PID 1 and set it up to
+listen on TCP 8081 (not exposed).
+
+You can find it on the [**Docker hub**](https://registry.hub.docker.com/) as the _autodeskcloud/pod_ image (tagged
+with release numbers).
 
 ### Documentation
 

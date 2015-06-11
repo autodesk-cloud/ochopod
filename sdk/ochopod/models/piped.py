@@ -31,9 +31,6 @@ from subprocess import Popen
 #: Our ochopod logger.
 logger = logging.getLogger('ochopod')
 
-#: Delay in seconds between two health-checks.
-SANITY = 5.0
-
 
 class _Cluster(Cluster):
     """
@@ -81,6 +78,7 @@ class Actor(FSM, Piped):
         self.last = {}
         self.latches.append(latch)
         self.path = 'lifecycle (piped process)'
+        self.start = hints['start'] == 'true'
         self.terminate = 0
 
     def initialize(self):
@@ -112,10 +110,14 @@ class Actor(FSM, Piped):
 
     def initial(self, data):
 
+        data.checks = self.checks
         data.command = None
-        data.forked = None
+        data.failed = 0
+        data.pids = 0
         data.js = {}
         data.next_sanity_check = 0
+        data.sub = None
+
         return 'spin', data, 0
 
     def reset(self, data):
@@ -124,11 +126,11 @@ class Actor(FSM, Piped):
         # - the state-machine will often be reset on purpose
         # - this happens when we need to first terminate the process
         #
-        if data.forked:
+        if data.sub:
             try:
-                logger.info('%s : tearing down process %s' % (self.path, data.forked.pid))
+                logger.info('%s : tearing down process %s' % (self.path, data.sub.pid))
                 self.hints['process'] = 'terminating'
-                self.tear_down(data.forked)
+                self.tear_down(data.sub)
 
             except Exception as _:
                 pass
@@ -143,13 +145,13 @@ class Actor(FSM, Piped):
     def wait_for_termination(self, data):
 
         elapsed = time.time() - data.reset_at
-        if data.forked:
+        if data.sub:
 
             #
             # - check whether or not the process is still running
             # - it may take some time (especially in term of graceful shutdown)
             #
-            if data.forked.poll() is None:
+            if data.sub.poll() is None:
 
                 if elapsed < self.grace:
 
@@ -162,24 +164,25 @@ class Actor(FSM, Piped):
 
                     #
                     # - the process is stuck, force a SIGKILL
+                    # - silently trap any failure
                     #
-                    logger.info('%s : pid %s not terminating, killing it' % (self.path, data.forked.pid))
+                    logger.info('%s : pid %s not terminating, killing it' % (self.path, data.sub.pid))
                     try:
-                        data.forked.kill()
+                        data.sub.kill()
 
                     except Exception as _:
                         pass
 
-            logger.debug('%s : pid %s terminated in %d seconds' % (self.path, data.forked.pid, int(elapsed)))
+            logger.debug('%s : pid %s terminated in %d seconds' % (self.path, data.sub.pid, int(elapsed)))
 
-        data.forked = None
+        data.sub = None
         self.hints['process'] = 'stopped'
         return 'spin', data, 0
 
     def spin(self, data):
 
         if self.terminate:
-            if not data.forked:
+            if not data.sub:
 
                 #
                 # - kill the actor (which will release the latch and unlock the main loop)
@@ -194,7 +197,7 @@ class Actor(FSM, Piped):
                 #
                 raise Aborted('terminating')
 
-        if self.commands:
+        elif self.commands:
 
             #
             # - we have at least one request pending
@@ -205,43 +208,55 @@ class Actor(FSM, Piped):
             data.latch = latch
             return req, data, 0
 
-        if data.forked:
+        else:
 
             #
-            # - no request to run
-            # - check if the process is still running and run the user-defined sanity check once in a while
+            # - check if the process is still running
             #
             now = time.time()
-            if data.forked.poll() is not None:
-                code = data.forked.returncode
+            if data.sub and data.sub.poll() is not None:
+                code = data.sub.returncode
                 if not code:
 
                     #
                     # - a successful exit code (0) will automatically force a shutdown
                     # - this is a convenient way for pods go down automatically once their task is done
                     #
-                    logger.error('%s : pid %s exited, shutting down' % (self.path, data.forked.pid))
+                    logger.error('%s : pid %s exited, shutting down' % (self.path, data.sub.pid))
                     self._request(['kill'])
 
                 else:
 
                     #
                     # - the process died on a non zero exit code
+                    # - increment the failure counter (too many failures in a row will fail the sanity check)
                     # - restart it gracefully
                     #
-                    logger.info('%s : pid %s died (code %d), re-running' % (self.path, data.forked.pid, code))
+                    data.failed += 1
+                    logger.error('%s : pid %s died (code %d), re-running' % (self.path, data.sub.pid, code))
                     self._request(['off', 'on'])
 
-            elif now >= data.next_sanity_check:
+            #
+            # - run the user-defined sanity check once in a while
+            #
+            if now >= data.next_sanity_check:
+                data.next_sanity_check = now + self.check_every
                 try:
 
                     #
+                    # - assert if the process aborted since the last sanity check
                     # - run the sanity check and schedule the next one
                     # - reset it each time
                     #
-                    data.next_sanity_check = now + SANITY
-                    self.sanity_check(data.forked.pid)
+                    assert not data.failed, \
+                        '%s : too many process failures (%d since last check)' % (self.path, data.failed)
+
+                    if data.sub:
+                        logger.debug('%s : running the sanity-check (pid %s)' % (self.path, data.sub.pid))
+                        self.sanity_check(data.sub.pid)
+
                     data.checks = self.checks
+                    data.failed = 0
                     
                 except Exception as failure:
         
@@ -250,26 +265,28 @@ class Actor(FSM, Piped):
                     # - eventually the process is stopped (up to the user to decide what to do)
                     #
                     data.checks -= 1
-                    if not data.checks:
-                        self._request(['off'])
-
+                    data.failed = 0
                     logger.warning('%s : sanity check (%d/%d) failed -> %s' %
                                    (self.path, self.checks - data.checks, self.checks, diagnostic(failure)))
+
+                    if not data.checks:
+                        logger.warning('%s : turning pod off' % self.path)
+                        self._request(['off'])
 
         return 'spin', data, SAMPLING
 
     def on(self, data):
 
-        if data.forked and data.js and (self.strict or data.js['dependencies'] != self.last['dependencies']):
+        if data.sub and data.js and (self.strict or data.js['dependencies'] != self.last['dependencies']):
 
             #
             # - if we already have a process, we want to re-configure -> force a reset first
             # - this will go through a graceful termination process
-            # - we'll come back here afterwards (with data.forked set to None)
+            # - we'll come back here afterwards (with data.sub set to None)
             #
-            raise Aborted('resetting to terminate pid %s first' % data.forked.pid)
+            raise Aborted('resetting to terminate pid %s first' % data.sub.pid)
 
-        elif data.forked:
+        elif data.sub:
 
             #
             # - the process is already running, fail gracefully on a 200
@@ -311,30 +328,35 @@ class Actor(FSM, Piped):
                 assert data.command, 'request to start process while not yet configured (user error ?)'
 
                 #
-                # - combine our environment variables with the overrides from configure()
-                # - popen() the new process
-                # - reset the sanity check counter
-                # - keep track of its pid to kill it later on
+                # - spawn a new sub-process if the auto-start flag is on OR if we already ran at least once
+                # - the start flag comes from the $ochopod_start environment variable
                 #
                 now = time.time()
-                env = deepcopy(self.env)
-                env.update(data.env)
-                tokens = data.command if self.shell else data.command.split(' ')
-                data.forked = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell)
-                outlog = open(os.path.join(self.cwd, 'out.log'), 'a') 
-                outlog.flush()
-                errlog = open(os.path.join(self.cwd, 'err.log'), 'a') 
-                errlog.flush()
-                data.forked = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell, stdout=outlog, stderr=errlog)
-                data.checks = self.checks
-                self.hints['process'] = 'running'
-                logger.info('%s : started <%s> as pid %s' % (self.path, data.command, data.forked.pid))
-                if data.env:
-                    unrolled = '\n'.join(['\t%s -> %s' % (k, v) for k, v in data.env.items()])
-                    logger.debug('%s : extra environment for pid %s ->\n%s' % (self.path, data.forked.pid, unrolled))
+
+                if not data.js or self.start or data.pids > 0:
+
+                    #
+                    # - combine our environment variables with the overrides from configure()
+                    # - popen() the new process
+                    # - reset the sanity check counter
+                    # - keep track of its pid to kill it later on
+                    #
+                    env = deepcopy(self.env)
+                    env.update(data.env)
+                    tokens = data.command if self.shell else data.command.split(' ')
+                    #data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell)
+                    with open(os.path.join(self.cwd, 'out.log'), 'a') as outlog, open(os.path.join(self.cwd, 'err.log'), 'a') as errlog:
+                        #outlog.flush()
+                        #errlog.flush()
+                        data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell, stdout=outlog, stderr=errlog)
+                    data.pids += 1
+                    self.hints['process'] = 'running'
+                    logger.info('%s : popen() #%d -> started <%s> as pid %s' % (self.path, data.pids, data.command, data.sub.pid))
+                    if data.env:
+                        unrolled = '\n'.join(['\t%s -> %s' % (k, v) for k, v in data.env.items()])
+                        logger.debug('%s : extra environment for pid %s ->\n%s' % (self.path, data.sub.pid, unrolled))
 
                 reply = {}, 200
-                data.next_sanity_check = now + SANITY
                 data.latch.set(reply)
 
             except Exception as failure:
@@ -369,7 +391,7 @@ class Actor(FSM, Piped):
             # - any failure trapped during the configuration -> HTTP 406
             #
             reply = {}, 406
-            logger.warning('%s : failed to run pre-check -> %s' % (self.path, diagnostic(failure)))
+            logger.warning('%s : failed to run the pre-check -> %s' % (self.path, diagnostic(failure)))
             data.latch.set(reply)
 
         self.commands.popleft()
@@ -381,10 +403,10 @@ class Actor(FSM, Piped):
         # - the /stop request does basically nothing
         # - it only guarantees we terminate the process
         #
-        if data.forked:
-            raise Aborted('resetting to terminate pid %s' % data.forked.pid)
+        if data.sub:
+            raise Aborted('resetting to terminate pid %s' % data.sub.pid)
 
-        reply={}, 200
+        reply = {}, 200
         data.latch.set(reply)
         self.commands.popleft()
         return 'spin', data, 0
@@ -394,8 +416,8 @@ class Actor(FSM, Piped):
         #
         # - the /kill request will first guarantee we terminate the process
         #
-        if data.forked:
-            raise Aborted('resetting to terminate pid %s' % data.forked.pid)
+        if data.sub:
+            raise Aborted('resetting to terminate pid %s' % data.sub.pid)
 
         try:
 
@@ -427,7 +449,7 @@ class Actor(FSM, Piped):
 
         try:
             logger.debug('%s : user signal received' % self.path)
-            js = self.signaled(data.js, process=data.forked)
+            js = self.signaled(data.js, process=data.sub)
             reply = js if js else {}, 200
 
         except Exception as failure:

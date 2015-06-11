@@ -25,3 +25,4 @@ Bindings
 ________
 
 .. autoclass:: bindings.ec2.api.EC2Marathon
+.. autoclass:: bindings.ec2.api.EC2Kubernetes

@@ -64,11 +64,14 @@ class Pod(EC2Kubernetes):
         #
         env = \
             {
+                'ochopod_application': '',
                 'ochopod_cluster': '',
                 'ochopod_debug': 'true',
                 'ochopod_local': 'false',
                 'ochopod_namespace': 'default',
-                'ochopod_port': '8080'
+                'ochopod_port': '8080',
+                'ochopod_start': 'true',
+                'ochopod_task': ''
             }
 
         env.update(os.environ)
@@ -90,9 +93,10 @@ class Pod(EC2Kubernetes):
                 logger.info('running in local mode (make sure you run a standalone zookeeper)')
                 hints.update(
                     {
+                        'fwk': 'kubernetes',
+                        'ip': '127.0.0.1',
                         'node': 'localhost',
                         'public': '127.0.0.1',
-                        'ip': '127.0.0.1',
                         'zk': '127.0.0.1:2181'
                     })
             else:
@@ -154,20 +158,17 @@ class Pod(EC2Kubernetes):
 
                 #
                 # - set 'task' to $HOSTNAME (the container is named after the k8s pod)
-                #
-                hints.update(
-                    {
-                        'fwk': 'kubernetes',
-                        'ports': ports,
-                        'task': env['HOSTNAME']
-                    })
-
-                #
                 # - get our public IPV4 address
                 # - the "node" will show up as the EC2 instance ID
                 #
-                hints['public'] = _aws('public-ipv4')
-                hints['node'] = _aws('instance-id')
+                hints.update(
+                    {
+                        'fwk': 'k8s-ec2',
+                        'node': _aws('instance-id'),
+                        'ports': ports,
+                        'public': _aws('public-ipv4'),
+                        'task': env['HOSTNAME']
+                    })
 
                 #
                 # - look the k8s "ocho-proxy" pod up
@@ -233,6 +234,7 @@ class Pod(EC2Kubernetes):
                         'process',
                         'public',
                         'state',
+                        'status',
                         'task'
                     ]
 
@@ -244,7 +246,22 @@ class Pod(EC2Kubernetes):
             # - reverse and dump ochopod.log as a json array
             #
             @web.route('/log', methods=['POST'])
-            def _log():
+            #@web.route('/log/<location>', methods=['POST'])
+            #@web.route('/log/<process>', method=['POST'])
+            def _log(container=None, location=None, option=None):
+                '''
+                Looks for logs from pod in specified location with option for error/out
+                '''
+                # files = {
+                #         'supervisor' : "",
+                #         'supervisor-error' : "",
+                #         'supervisor-out' : ""
+                #     }
+
+                # if location == 'supervisor':
+                #     logfile = files['supervisor-%s' % option]
+
+                
                 with open(ochopod.LOG, 'r+') as log:
                     lines = [line for line in log]
                     return json.dumps(lines), 200

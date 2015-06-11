@@ -70,17 +70,10 @@ an explicit working directory) could be:
 """
 
 
-class Model(object):
-    """
-    Abstract class defining a clustering model (e.g how pods belonging to the same family will orchestrate to
-    end up forming a functional cluster).
-    """
-    pass
-
-
 class Cluster(object):
     """
-    Cluster description including dependencies. This is what is passed down to you when the pod needs to be configured.
+    Cluster description including dependencies. This is what is passed down to you when the pod needs to be configured
+    or when a probe() callback is invoked.
 
     The :attr:`pods` and :attr:`dependencies` dicts contain the registration payload for a set of pods. The keys do
     not really matter (they are random and unique). The payload describes things such as where the pods run, what
@@ -95,7 +88,7 @@ class Cluster(object):
             "node": "i-d5d1b53a",
             "seq": 19,
             "zk": "10.181.124.223:2181",
-            "binding": "marathon",
+            "binding": "marathon-ec2",
             "namespace": "my-service",
             "port": "8080",
             "cluster": "database",
@@ -103,6 +96,7 @@ class Cluster(object):
             "debug": "true",
             "local": "false",
             "public": "54.145.22.4",
+            "status": "",
             "ports":
             {
                 "8080": 1024
@@ -160,6 +154,27 @@ class Cluster(object):
         :param port: TCP port to remap
         :param public: if true the method will return public IP addresses
         :rtype: str
+        """
+        pass
+
+
+class Model(object):
+    """
+    Abstract class defining a clustering model (e.g how pods belonging to the same family will orchestrate to
+    end up forming a functional cluster).
+    """
+
+    def probe(self, cluster):
+        """
+        Optional callback invoked at regular intervals by the leader pod to assess the overall cluster health.
+        Detailed information about the cluster is passed (similarly to the configuration phase). A typical use case
+        would be to check if each peer functions as expected whatever this means given the context. Any exception
+        thrown in here will be gracefully trapped and the cluster status set accordingly. An arbitrary status message
+        can also be set by returning a string (e.g to indicate some high-level metrics maybe).
+
+        :type cluster: :class:`Cluster`
+        :param cluster: the current cluster topology
+        :rtype: str or None
         """
         pass
 
@@ -279,6 +294,9 @@ class Reactive(Model):
 
     """
 
+    #: Delay in seconds between two probes
+    probe_every = 60.0
+
     #: Damper in seconds, e.g how long does the leader pod waits after spotting changes and before configuring.
     #: It is *strongly* advised to set it to something reasonable (30 seconds ?) whenever forming clusters.
     #: Be aware that any sudden drop of connectivity to zookeeper is considered a change, meaning that a small
@@ -313,8 +331,11 @@ class Piped(LifeCycle):
        from ochopod.models.piped import Actor as Piped
     """
 
-    #: Number of (optional) sanity checks we can afford to fail before.
+    #: Number of sanity checks we can afford to fail before turning the sub-process off.
     checks = 1
+
+    #: Delay in seconds between two sanity checks.
+    check_every = 60.0
 
     #: Optional working directory to explicitly enforce when running the sub-process. If not defined the
     #: sub-process will be run the current directory, wherever that may be (usually / if you are running your

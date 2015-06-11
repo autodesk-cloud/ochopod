@@ -27,8 +27,8 @@ some higher-level model.
 
 Ochopod is meant to be used on top of modern resourcing technologies. Our stack is made of three distinct
 layers : a pool of resources (either virtualized or bare-metal), the resourcing layer (Kubernetes_ or Mesos_ plus one
-or more frameworks such as Marathon_ or Aurora_) and finally the application layer on top (e.g Docker_ and whatever
-runs in the containers).
+or more frameworks such as Marathon_) and finally the application layer on top (e.g Docker_ and whatever runs in the
+containers).
 
 .. figure:: png/stack.png
    :align: center
@@ -180,6 +180,7 @@ For instance:
         "process": "running",
         "ip": "10.181.100.14",
         "public": "54.224.203.40",
+        "status": "",
         "ports": {
             "8080": 1025,
             "9000": 1026
@@ -188,6 +189,8 @@ For instance:
         "port": "8080"
     }
 
+The *status* setting is an arbitrary string that may be set by a leader pod to indicate general information about the
+cluster.
 
 The **POST /control/signal** request is a generic placeholder for out-the-band logic. Take for instance the case where
 you need to switch your web-tier into a special mode or maybe update your load-balancer configuration on the fly. This
@@ -209,6 +212,22 @@ Upon fatal failures the pod will gracefully slip into a dead state but will stil
 its logs). Additional requests are also supported to manually restart the sub-process or turn it on/off. During
 re-configuration any pod tagged as dead will be skipped silently and therefore not seen by its peers.
 
+Assessing health
+****************
+
+We propose two ways to gauge whether or not the system behaves as expected : an optional *sanity check* run by each pod
+and focusing on the process it manages and an optional *probe* that is run by the leader pod only and is meant to check
+on the whole cluster.
+
+Both checks are implemented as callbacks and can be run at varying frequency. The *sanity check* focuses on what the
+pod actually runs (e.g its sub-process) and can be customized any way you want (CURL the process, run a script, read
+some file, etc). Failure to run the sanity checks up to a configurable amount of retries will automatically turn the
+pod off (up to the user to turn it back on).
+
+.. note::
+    Any unexpected exit of the sub-process (e.g anything other than zero) will automatically fail the next sanity
+    check.
+
 Framework bindings
 __________________
 
@@ -222,12 +241,12 @@ Marathon_ offers enough semantics with its application REST API to implement a s
 
 Our pods transport 2 dedicated hints : **application** and **task**. The **application** identifies the high-level
 construct through which the pod was created (for instance a *replication controller* in the Kubernetes_ case). The
-**task** identifies the pod itself in the underlying stack.
+**task** identifies the pod itself in the underlying stack. Those concepts should not really matter for you and are
+only relevant to the tooling infrastructure interfacing with Kubernetes_ or Marathon_.
 
 .. note::
-   We only offer bindings to run over Kubernetes_ and Marathon_ over EC2 at this point.
+   We only offer bindings to run over Kubernetes_ and Marathon_ over AWS EC2 at this point.
 
-.. _Aurora: http://aurora.incubator.apache.org/
 .. _Chef: http://www.getchef.com/chef/
 .. _Docker: https://www.docker.com/
 .. _Doozer: https://github.com/ha/doozer

@@ -65,13 +65,14 @@ class Pod(EC2Marathon):
         #
         env = \
             {
-                'ochopod_cluster': '',
-                'ochopod_debug': 'false',
+                'ochopod_application': '',
+                'ochopod_cluster': 'default',
+                'ochopod_debug': 'true',
                 'ochopod_local': 'false',
                 'ochopod_namespace': 'marathon',
                 'ochopod_port': '8080',
-                'MESOS_TASK_ID': '',
-                'MARATHON_APP_ID': '/local',
+                'ochopod_start': 'true',
+                'ochopod_task': '',
                 'PORT_8080': '8080'
             }
 
@@ -95,14 +96,6 @@ class Pod(EC2Marathon):
             # - the ip and zookeeper are defaulted to localhost to enable easy testing
             #
             hints = {k[8:]: v for k, v in env.items() if k.startswith('ochopod_')}
-            hints.update(
-                {
-                    'fwk': 'mesos+marathon',
-                    'application': env['MARATHON_APP_ID'][1:],
-                    'task': env['MESOS_TASK_ID'],
-                    'ports': ports,
-                })
-
             if local or hints['local'] == 'true':
 
                 #
@@ -112,9 +105,11 @@ class Pod(EC2Marathon):
                 logger.info('running in local mode (make sure you run a standalone zookeeper)')
                 hints.update(
                     {
-                        'node': 'local',
-                        'public': '127.0.0.1',
+                        'fwk': 'marathon-ec2',
                         'ip': '127.0.0.1',
+                        'node': 'local',
+                        'ports': ports,
+                        'public': '127.0.0.1',
                         'zk': '127.0.0.1:2181'
                     })
             else:
@@ -123,37 +118,70 @@ class Pod(EC2Marathon):
                 # - we are (assuming to be) deployed on EC2
                 # - get our underlying metadata using curl
                 #
-                def _peek(token):
+                def _peek(token, strict=True):
                     code, lines = shell('curl -f http://169.254.169.254/latest/meta-data/%s' % token)
-                    assert code is 0, 'unable to lookup EC2 metadata for %s (are you running on EC2 ?)' % token
+                    assert not strict or code is 0, 'unable to lookup EC2 metadata for %s (are you running on EC2 ?)' % token
                     return lines[0]
 
                 #
                 # - get our local and public IPV4 addresses
                 # - the "node" will show up as the EC2 instance ID
+                # - note we allow the public IPv4 lookup to fail (in case we run in VPC)
                 #
-                hints['ip'] = _peek('local-ipv4')
-                hints['public'] = _peek('public-ipv4')
-                hints['node'] = _peek('instance-id')
+                hints.update(
+                    {
+                        'application': env['MARATHON_APP_ID'][1:],
+                        'fwk': 'marathon-ec2',
+                        'ip': _peek('local-ipv4'),
+                        'node': _peek('instance-id'),
+                        'ports': ports,
+                        'public': _peek('public-ipv4', strict=False),
+                        'task': env['MESOS_TASK_ID'],
+                        'zk': ''
+                    })
+
+                def _install_from_package():
+
+                    #
+                    # - a regular package install will write the slave settings under /etc/mesos/zk
+                    # - the snippet in there looks like zk://10.0.0.56:2181/mesos
+                    #
+                    code, lines = shell("cat /etc/mesos/zk")
+                    assert code is 0 and lines[0], 'unable to retrieve the zk connection string'
+                    return lines[0][5:].split('/')[0]
+
+                def _dcos_deployment():
+
+                    #
+                    # - a DCOS slave is setup slightly differently with the settings being environment
+                    #   variables set in /opt/mesosphere/etc/mesos-slave
+                    # - the snippet in there is prefixed by MESOS_MASTER= and uses an alias
+                    # - it looks like MESOS_MASTER=zk://leader.mesos:2181/mesos
+                    #
+                    code, lines = shell("grep MASTER /opt/mesosphere/etc/mesos-slave")
+                    assert code is 0 and lines[0], 'unable to retrieve the zk connection string'
+                    return lines[0][18:].split('/')[0]
 
                 #
-                # - the underlying /etc/mesos is assumed to be mounted
-                # - go in there fetch our zookeeper connection string
-                # - warning, the connection string mesos uses is formatted like zk://<ip:port>,..,<ip:port>/mesos
-                # - just keep the ip & port part
+                # - depending on how the slave has been installed we might have to look in various places
+                #   to find out what our zookeeper connection string is
+                # - warning, a URL like format such as zk://<ip:port>,..,<ip:port>/mesos is used
+                # - just keep the ip & port part and discard the rest
                 #
-                code, lines = shell("cat /etc/mesos/zk")
-                assert code is 0, 'could not read from /etc/mesos (are you mounting it ?)'
-                hints['zk'] = lines[0][5:].split('/')[0]
+                for method in [_install_from_package, _dcos_deployment]:
+                    try:
+                        hints['zk'] = method()
+                        break
+
+                    except:
+                        pass
+
+                assert hints['zk'], 'unable to determine where zookeeper is located (unsupported/bogus setup ?)'
 
             #
             # - the cluster must be fully qualified with a namespace (which is defaulted anyway)
-            # - if the cluster is not specified use the marathon application identifier as a fallback
             #
-            assert hints['namespace'], 'no cluster namespace defined (user error ?)'
-            if not hints['cluster']:
-                logger.debug('cluster identified not defined, falling back on %s' % hints['application'])
-                hints['cluster'] = hints['application']
+            assert hints['cluster'] and hints['namespace'], 'no cluster and/or namespace defined (user error ?)'
 
             #
             # - start the life-cycle actor which will pass our hints (as a json object) to its underlying sub-process
@@ -206,6 +234,7 @@ class Pod(EC2Marathon):
                         'process',
                         'public',
                         'state',
+                        'status',
                         'task'
                     ]
 

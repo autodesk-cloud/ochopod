@@ -60,7 +60,7 @@ class EC2Marathon(Binding):
 class EC2Kubernetes(Binding):
     """
     Kubernetes binding for pods running on AWS/K8S, providing some basic cluster lookup. We run a Flask micro-server
-    to handle leader or CLI requests. There is no port remapping given the way K8S uses subnetting.
+    to handle leader or CLI requests. There is no port remapping given the way K8S uses sub-netting.
 
     You **must** run this on a EC2 instance part of a K8S cluster. It is assumed Zookeeper is running on a pod called
     "ocho-proxy".  The pod & ZK IPs are retrieved by looking the RO service on 10.0.0.1.

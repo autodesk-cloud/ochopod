@@ -135,12 +135,12 @@ class ZK(FSM):
             # - this is where we can store arbitrary information (e.g our breadcrumbs)
             # - we ask for a sequence counter as well which we then keep (e.g in case of connection loss or reset
             #   we guarantee the pod won't get assigned a new index)
+            # - this is *critical* for some use-cases (e.g Kafka where the broker index must remain the same)
             #
             path = data.zk.create('%s/pods/%s.' % (self.prefix, self.id), ephemeral=True, sequence=True)
             tokens = path.split('.')
-            latest = int(tokens[-1])
-            if not self.seq:
-                self.seq = latest
+            if self.seq is None:
+                self.seq = int(tokens[-1])
             self.breadcrumbs['seq'] = self.seq
             js = json.dumps(self.breadcrumbs)
             data.zk.set(path, js)
@@ -176,7 +176,7 @@ class ZK(FSM):
             state = msg['state']
             logger.debug('%s : zk state change -> %s (%s)' % (self.path, str(state), 'connected' if self.connected else 'disconnected'))
             if self.connected and state != KazooState.CONNECTED:
-                logger.warning('%s: lost connection (%s) / forcing a reset' % (self.path, str(state)))
+                logger.warning('%s : lost connection (%s) / forcing a reset' % (self.path, str(state)))
                 self.force_reset = 1
                 self.connected = 0
 
@@ -256,7 +256,7 @@ class Coordinator(ZK):
             # - start the controller actor
             #
             data.latch = ThreadingFuture()
-            data.controller = self.model.start(data.zk, self.hints, self.scope, self.tag, self.port, data.latch)
+            data.controller = self.model.start(data.zk, self.id, self.hints, self.scope, self.tag, self.port, data.latch)
             return 'lock', data, 0
 
         except LockTimeout:
