@@ -318,10 +318,12 @@ class Actor(FSM, Piped):
                     # - run the configuration procedure if we have some json
                     # - we'll use whatever it returns to popen() a new process
                     # - keep track of the shell command line returned by configure() for later
+                    # - make sure the optional overrides set by configure() are strings
                     #
                     cluster = _Cluster(data.js)
                     logger.info('%s : configuring pod %d/%d' % (self.path, 1 + cluster.index, cluster.size))
-                    data.command, data.env = self.configure(cluster)
+                    data.command, overrides = self.configure(cluster)
+                    data.env = {key: str(value) for key, value in overrides.items()}
                     self.last = data.js
 
                 assert data.command, 'request to start process while not yet configured (user error ?)'
@@ -330,7 +332,6 @@ class Actor(FSM, Piped):
                 # - spawn a new sub-process if the auto-start flag is on OR if we already ran at least once
                 # - the start flag comes from the $ochopod_start environment variable
                 #
-                now = time.time()
                 if not data.js or self.start or data.pids > 0:
 
                     #
