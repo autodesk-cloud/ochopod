@@ -121,11 +121,12 @@ class Actor(FSM, Piped):
 
     def reset(self, data):
 
-        #
-        # - the state-machine will often be reset on purpose
-        # - this happens when we need to first terminate the process
-        #
-        if data.sub:
+        if data.sub and data.sub.poll() is None:
+
+            #
+            # - the state-machine will often be reset on purpose
+            # - this happens when we need to first terminate the process
+            #
             try:
                 logger.info('%s : tearing down process %s' % (self.path, data.sub.pid))
                 self.hints['process'] = 'terminating'
@@ -159,6 +160,14 @@ class Actor(FSM, Piped):
                     #
                     return 'wait_for_termination', data, SAMPLING
 
+                elif self.soft:
+
+                    #
+                    # - if the soft switch is on bypass the SIGKILL completely
+                    # - this is a special case to handle peculiar scenarios
+                    #
+                    logger.info('%s: bypassing the forced termination (leaking pid %s)...' % (self.path, data.sub.pid))
+
                 else:
 
                     #
@@ -172,7 +181,8 @@ class Actor(FSM, Piped):
                     except Exception as _:
                         pass
 
-            logger.debug('%s : pid %s terminated in %d seconds' % (self.path, data.sub.pid, int(elapsed)))
+            else:
+                logger.debug('%s : pid %s terminated in %d seconds' % (self.path, data.sub.pid, int(elapsed)))
 
         data.sub = None
         self.hints['process'] = 'stopped'

@@ -343,11 +343,17 @@ class Piped(LifeCycle):
     cwd = None
 
     #: Grace period in seconds, e.g how long does the pod wait before forcefully killing its sub-process (SIGKILL).
-    #: The termination is done by default with a SIGTERM (but can be overwritten using :meth:`LifeCycle.tear_down`).
+    #: The termination is done by default with a SIGTERM (but can be overwritten using :meth:`LifeCycle.tear_down`
+    #: and/or the soft switch).
     grace = 60.0
 
     #: If true the sub-process will interpret its command line as a shell command (e.g you can use pipes for instance).
     shell = False
+
+    #: If true the pod will _not_ attempt to force a SIGKILL to terminate the sub-process. Be careful as this may
+    #: possibly lead to leaking your process if :meth:`LifeCycle.tear_down` is defined (and not killing it). Use this
+    #: option to handle uncommon scenarios (for instance a 0-downtime HAProxy re-configuration).
+    soft = False
 
     #: If true the pod will always configure itself whenever requested by the leader. If false it will only do so
     #: either upon the first leader request (e.g when it joins the cluster) or if its dependencies change. This
