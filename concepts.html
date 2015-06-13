@@ -202,8 +202,9 @@ already been killed and is now idling. Soft failures will trigger a <strong>HTTP
 <li><strong>POST /info</strong>: runtime pod information.</li>
 <li><strong>POST /log</strong>: current pod log (up to <em>32KB</em>).</li>
 <li><strong>POST /reset</strong>: forces a pod reset and re-connection to <a class="reference external" href="http://zookeeper.apache.org/">Zookeeper</a>.</li>
-<li><strong>POST /control/on</strong>: starts the sub-process.</li>
+<li><strong>POST /control/on</strong>: starts the sub-process and potentially configures it.</li>
 <li><strong>POST /control/off</strong>: gracefully terminates the sub-process.</li>
+<li><strong>POST /control/ok</strong>: triggers the optional post-configuration callback</li>
 <li><strong>POST /control/check</strong>: runs a configuration pre-check.</li>
 <li><strong>POST /control/kill</strong>: turns the pod off which then switches into idling.</li>
 <li><strong>POST /control/signal</strong>: triggers custom user logic.</li>
@@ -239,14 +240,19 @@ can be neatly packaged in your pod script and activated using a single HTTP requ
 </div>
 <div class="section" id="the-state-machine">
 <h3>The state-machine<a class="headerlink" href="#the-state-machine" title="Permalink to this headline">¶</a></h3>
-<p>Upon startup the pod will idle until it receives a <strong>POST /control/on</strong> request from its leader. When the configuration
-succeeds the pod will fork whatever process it&#8217;s told to. This sub-process will then be monitored and restarted if
-it exits on a non zero code. Any further configuration request will first gracefully terminate the sub-process before
-re-forking it.</p>
+<p>Upon startup the pod will idle until it receives a <strong>POST /control/on</strong> request from its leader at which point it
+will configure itself. When the configuration succeeds the pod will fork whatever process it&#8217;s told to. This
+sub-process will then be monitored and restarted if it exits on a non zero code. Any further configuration request
+will first gracefully terminate the sub-process before re-forking it.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">You can also define custom logic to handle the sub-process health-check and tear down. The default tear down is
 implemented by sending a SIGTERM and waiting for the sub-process to terminate (for up to a minute).</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">You can specify a configuration sequence in which all pods get started sequentially if needed. By default they
+will be started in parallel.</p>
 </div>
 <p>Upon fatal failures the pod will gracefully slip into a dead state but will still be reachable (for instance to grab
 its logs). Additional requests are also supported to manually restart the sub-process or turn it on/off. During

@@ -263,7 +263,8 @@ expires).</p>
 <p>This can be used to check that all dependencies are there (for instance if you require a specific amount of
 nodes). You can also use it to check on other dynamic factors that may influence the configuration process.</p>
 <p>The cluster information passed to you will contain any registered pod, including the ones that may be tagged
-as dead.</p>
+as dead. Please note running this callback does not mean that the configuration will actually happen (another
+pod in the cluster may fail this check).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -283,8 +284,8 @@ dict containing environment variable overrides.</p>
 <p>The cluster information passed to you will only contain any registered pod that is not tagged as dead.</p>
 <p>Any environment variable passed to the pod will be also passed down to the underlying process. Any additional
 key/value pair specified in the output dict will be passed as well (e.g you can override variables
-specified at the framework level).</p>
-<p>Once the process is started it will be monitored on a regular basis. Any successful exit (0) will shutdown
+specified at the framework level). Please note all values will be turned into strings.</p>
+<p>Once the process is started it will be monitored on a regular basis. Any successful exit (code 0) will shutdown
 the pod and let it idle until the container is physically destroyed. Any error (exit code between 1 and 254)
 will trigger an automatic process re-start.</p>
 <div class="admonition warning">
@@ -455,7 +456,8 @@ pod script from an init service).</p>
 <dt id="api.Piped.grace">
 <code class="descname">grace</code><em class="property"> = 60.0</em><a class="headerlink" href="#api.Piped.grace" title="Permalink to this definition">¶</a></dt>
 <dd><p>Grace period in seconds, e.g how long does the pod wait before forcefully killing its sub-process (SIGKILL).
-The termination is done by default with a SIGTERM (but can be overwritten using <a class="reference internal" href="#api.LifeCycle.tear_down" title="api.LifeCycle.tear_down"><code class="xref py py-meth docutils literal"><span class="pre">LifeCycle.tear_down()</span></code></a>).</p>
+The termination is done by default with a SIGTERM (but can be overwritten using <a class="reference internal" href="#api.LifeCycle.tear_down" title="api.LifeCycle.tear_down"><code class="xref py py-meth docutils literal"><span class="pre">LifeCycle.tear_down()</span></code></a>
+and/or the soft switch).</p>
 </dd></dl>
 
 <dl class="attribute">
