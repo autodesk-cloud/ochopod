@@ -362,7 +362,7 @@ class Piped(LifeCycle):
     #: If true the sub-process will interpret its command line as a shell command (e.g you can use pipes for instance).
     shell = False
 
-    #: If true the pod will _not_ attempt to force a SIGKILL to terminate the sub-process. Be careful as this may
+    #: If true the pod will **not** attempt to force a SIGKILL to terminate the sub-process. Be careful as this may
     #: possibly lead to leaking your process if :meth:`LifeCycle.tear_down` is defined (and not killing it). Use this
     #: option to handle uncommon scenarios (for instance a 0-downtime HAProxy re-configuration).
     soft = False
