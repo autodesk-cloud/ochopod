@@ -136,6 +136,26 @@ an explicit working directory) could be:</p>
 <em class="property">class </em><code class="descclassname">api.</code><code class="descname">Model</code><a class="headerlink" href="#api.Model" title="Permalink to this definition">¶</a></dt>
 <dd><p>Abstract class defining a clustering model (e.g how pods belonging to the same family will orchestrate to
 end up forming a functional cluster).</p>
+<dl class="method">
+<dt id="api.Model.probe">
+<code class="descname">probe</code><span class="sig-paren">(</span><em>cluster</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Model.probe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional callback invoked at regular intervals by the leader pod to assess the overall cluster health.
+Detailed information about the cluster is passed (similarly to the configuration phase). A typical use case
+would be to check if each peer functions as expected whatever this means given the context. Any exception
+thrown in here will be gracefully trapped and the cluster status set accordingly. An arbitrary status message
+can also be set by returning a string (e.g to indicate some high-level metrics maybe).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cluster</strong> (<a class="reference internal" href="#api.Cluster" title="api.Cluster"><code class="xref py py-class docutils literal"><span class="pre">Cluster</span></code></a>) &#8211; the current cluster topology</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">str or None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="class">
@@ -305,6 +325,22 @@ will trigger an automatic process re-start.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.LifeCycle.configured">
+<code class="descname">configured</code><span class="sig-paren">(</span><em>cluster</em><span class="sig-paren">)</span><a class="headerlink" href="#api.LifeCycle.configured" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional callback invoked on each pod within a cluster if and only if its configuration process successfully
+completed (the leader will trigger this callback on each pod in parallel). The cluster information is passed
+again for symmetry with the other callbacks. Any exception raised within this callback will be silently trapped.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cluster</strong> (<a class="reference internal" href="#api.Cluster" title="api.Cluster"><code class="xref py py-class docutils literal"><span class="pre">Cluster</span></code></a>) &#8211; the current cluster topology</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.LifeCycle.finalize">
 <code class="descname">finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.LifeCycle.finalize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Optional callback invoked last whenever the pod is shutting down. You can use it to perform cleanup tasks
@@ -421,6 +457,12 @@ with pods that are known to configure slowly.</p>
 </dd></dl>
 
 <dl class="attribute">
+<dt id="api.Reactive.probe_every">
+<code class="descname">probe_every</code><em class="property"> = 60.0</em><a class="headerlink" href="#api.Reactive.probe_every" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delay in seconds between two probes</p>
+</dd></dl>
+
+<dl class="attribute">
 <dt id="api.Reactive.sequential">
 <code class="descname">sequential</code><em class="property"> = False</em><a class="headerlink" href="#api.Reactive.sequential" title="Permalink to this definition">¶</a></dt>
 <dd><p>If true the leader will fire its control requests to the pods one after the other. Otherwise all the
@@ -438,6 +480,12 @@ callback. To import its actor implementation do something like:</p>
 <div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">ochopod.models.piped</span> <span class="kn">import</span> <span class="n">Actor</span> <span class="k">as</span> <span class="n">Piped</span>
 </pre></div>
 </div>
+<dl class="attribute">
+<dt id="api.Piped.check_every">
+<code class="descname">check_every</code><em class="property"> = 60.0</em><a class="headerlink" href="#api.Piped.check_every" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delay in seconds between two sanity checks.</p>
+</dd></dl>
+
 <dl class="attribute">
 <dt id="api.Piped.checks">
 <code class="descname">checks</code><em class="property"> = 1</em><a class="headerlink" href="#api.Piped.checks" title="Permalink to this definition">¶</a></dt>
@@ -464,6 +512,14 @@ and/or the soft switch).</p>
 <dt id="api.Piped.shell">
 <code class="descname">shell</code><em class="property"> = False</em><a class="headerlink" href="#api.Piped.shell" title="Permalink to this definition">¶</a></dt>
 <dd><p>If true the sub-process will interpret its command line as a shell command (e.g you can use pipes for instance).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="api.Piped.soft">
+<code class="descname">soft</code><em class="property"> = False</em><a class="headerlink" href="#api.Piped.soft" title="Permalink to this definition">¶</a></dt>
+<dd><p>If true the pod will <strong>not</strong> attempt to force a SIGKILL to terminate the sub-process. Be careful as this may
+possibly lead to leaking your process if <a class="reference internal" href="#api.LifeCycle.tear_down" title="api.LifeCycle.tear_down"><code class="xref py py-meth docutils literal"><span class="pre">LifeCycle.tear_down()</span></code></a> is defined (and not killing it). Use this
+option to handle uncommon scenarios (for instance a 0-downtime HAProxy re-configuration).</p>
 </dd></dl>
 
 <dl class="attribute">
