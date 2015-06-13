@@ -86,15 +86,21 @@ class Actor(FSM, Piped):
     def can_configure(self, js):
         pass
 
+    def configured(self, js):
+        pass
+
+    def sanity_check(self, running):
+        pass
+
+    def finalize(self):
+        pass
+
     def configure(self, js):
 
         #
         # - this is the only method that *must* be implemented by the user
         #
         raise NotImplementedError
-
-    def sanity_check(self, running):
-        pass
 
     def tear_down(self, running):
         
@@ -103,9 +109,6 @@ class Actor(FSM, Piped):
         # - this should be good enough in the vast majority of cases
         #
         running.terminate()
-
-    def finalize(self):
-        pass
 
     def initial(self, data):
 
@@ -469,11 +472,33 @@ class Actor(FSM, Piped):
         self.commands.popleft()
         return 'spin', data, 0
 
+    def ok(self, data):
+
+        try:
+
+            assert data.js, 'control/ok received out of context (leader bug ?)'
+            logger.debug('%s : cluster has been formed, invoking configured()' % self.path)
+            cluster = _Cluster(data.js)
+            self.configured(cluster)
+            reply = {}, 200
+
+        except Exception as failure:
+
+            #
+            # - abort on a 500 upon any failure
+            #
+            reply = {}, 500
+            logger.warning('%s : failed to signal -> %s' % (self.path, diagnostic(failure)))
+
+        data.latch.set(reply)
+        self.commands.popleft()
+        return 'spin', data, 0
+
     def specialized(self, msg):
 
         assert 'request' in msg, 'bogus message received ?'
         req = msg['request']
-        if req in ['on', 'check', 'off', 'kill', 'signal']:
+        if req in ['check', 'on', 'off', 'ok', 'kill', 'signal']:
 
             #
             # - we got a request from the leader or the CLI

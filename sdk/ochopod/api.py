@@ -204,7 +204,8 @@ class LifeCycle(object):
         nodes). You can also use it to check on other dynamic factors that may influence the configuration process.
 
         The cluster information passed to you will contain any registered pod, including the ones that may be tagged
-        as dead.
+        as dead. Please note running this callback does not mean that the configuration will actually happen (another
+        pod in the cluster may fail this check).
 
         :type cluster: :class:`Cluster`
         :param cluster: the current cluster topology
@@ -221,9 +222,9 @@ class LifeCycle(object):
 
         Any environment variable passed to the pod will be also passed down to the underlying process. Any additional
         key/value pair specified in the output dict will be passed as well (e.g you can override variables
-        specified at the framework level).
+        specified at the framework level). Please note all values will be turned into strings.
 
-        Once the process is started it will be monitored on a regular basis. Any successful exit (0) will shutdown
+        Once the process is started it will be monitored on a regular basis. Any successful exit (code 0) will shutdown
         the pod and let it idle until the container is physically destroyed. Any error (exit code between 1 and 254)
         will trigger an automatic process re-start.
 
@@ -232,6 +233,34 @@ class LifeCycle(object):
         :type cluster: :class:`Cluster`
         :param cluster: the current cluster topology
         :rtype: a (string, dict) 2-uple
+        """
+        pass
+
+    def configured(self, cluster):
+        """
+        Optional callback invoked on each pod within a cluster if and only if its configuration process successfully
+        completed (the leader will trigger this callback on each pod in parallel). The cluster information is passed
+        again for symmetry with the other callbacks. Any exception raised within this callback will be silently trapped.
+
+        :type cluster: :class:`Cluster`
+        :param cluster: the current cluster topology
+        """
+        pass
+
+    def signaled(self, js, process):
+        """
+        Optional callback invoked upon a user /control/signal HTTP request is sent to the pod. This is meant to be a
+        placeholder for situations where one needs to perform out-of-band operations on a pod. Any exception raised
+        in this method will result in a HTTP 500 being returned to the caller. Please note you can return arbitrary
+        json content as well (handy when building monitoring or deployment tools).
+
+        ..warning:: it is not advised to terminate the underlying process in this method.
+
+        :type js: dict
+        :type forked: :class:`subprocess.Popen`
+        :param js: optional json payload passed via the HTTP request, can be anything
+        :param process: the underlying process run by the pod or None if off
+        :rtype: a dict that will be serialized back to the caller as utf-8 json or None
         """
         pass
 
@@ -254,23 +283,6 @@ class LifeCycle(object):
 
         :type process: :class:`subprocess.Popen`
         :param process: the underlying process run by the pod
-        """
-        pass
-
-    def signaled(self, js, process):
-        """
-        Optional callback invoked upon a user /control/signal HTTP request is sent to the pod. This is meant to be a
-        placeholder for situations where one needs to perform out-of-band operations on a pod. Any exception raised
-        in this method will result in a HTTP 500 being returned to the caller. Please note you can return arbitrary
-        json content as well (handy when building monitoring or deployment tools).
-
-        ..warning:: it is not advised to terminate the underlying process in this method.
-
-        :type js: dict
-        :type forked: :class:`subprocess.Popen`
-        :param js: optional json payload passed via the HTTP request, can be anything
-        :param process: the underlying process run by the pod or None if off
-        :rtype: a dict that will be serialized back to the caller as utf-8 json or None
         """
         pass
 

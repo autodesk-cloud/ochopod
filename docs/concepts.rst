@@ -159,8 +159,9 @@ Each pod can receive the following HTTP requests:
  - **POST /info**: runtime pod information.
  - **POST /log**: current pod log (up to *32KB*).
  - **POST /reset**: forces a pod reset and re-connection to Zookeeper_.
- - **POST /control/on**: starts the sub-process.
+ - **POST /control/on**: starts the sub-process and potentially configures it.
  - **POST /control/off**: gracefully terminates the sub-process.
+ - **POST /control/ok**: triggers the optional post-configuration callback
  - **POST /control/check**: runs a configuration pre-check.
  - **POST /control/kill**: turns the pod off which then switches into idling.
  - **POST /control/signal**: triggers custom user logic.
@@ -199,14 +200,18 @@ can be neatly packaged in your pod script and activated using a single HTTP requ
 The state-machine
 *****************
 
-Upon startup the pod will idle until it receives a **POST /control/on** request from its leader. When the configuration
-succeeds the pod will fork whatever process it's told to. This sub-process will then be monitored and restarted if
-it exits on a non zero code. Any further configuration request will first gracefully terminate the sub-process before
-re-forking it.
+Upon startup the pod will idle until it receives a **POST /control/on** request from its leader at which point it
+will configure itself. When the configuration succeeds the pod will fork whatever process it's told to. This
+sub-process will then be monitored and restarted if it exits on a non zero code. Any further configuration request
+will first gracefully terminate the sub-process before re-forking it.
 
 .. note::
-   You can also define custom logic to handle the sub-process health-check and tear down. The default tear down is
-   implemented by sending a SIGTERM and waiting for the sub-process to terminate (for up to a minute).
+    You can also define custom logic to handle the sub-process health-check and tear down. The default tear down is
+    implemented by sending a SIGTERM and waiting for the sub-process to terminate (for up to a minute).
+
+.. note::
+    You can specify a configuration sequence in which all pods get started sequentially if needed. By default they
+    will be started in parallel.
 
 Upon fatal failures the pod will gracefully slip into a dead state but will still be reachable (for instance to grab
 its logs). Additional requests are also supported to manually restart the sub-process or turn it on/off. During
