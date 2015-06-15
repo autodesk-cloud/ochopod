@@ -252,6 +252,16 @@ class Pod(EC2Marathon):
                     return json.dumps(lines), 200
 
             #
+            # - external hook exposing our circular log
+            # - reverse and dump ochopod.log as a json array
+            #
+            @web.route('/log/app', methods=['POST'])
+            def _log():
+                with open(ochopod.PROC_LOG, 'r+') as log:
+                    lines = [line for line in log]
+                    return json.dumps(lines), 200
+                    
+            #
             # - web-hook used to receive requests from the leader or the CLI tools
             # - those requests are passed down to the executor actor
             # - any non HTTP 200 response is a failure

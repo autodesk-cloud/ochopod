@@ -246,23 +246,18 @@ class Pod(EC2Kubernetes):
             # - reverse and dump ochopod.log as a json array
             #
             @web.route('/log', methods=['POST'])
-            #@web.route('/log/<location>', methods=['POST'])
-            #@web.route('/log/<process>', method=['POST'])
-            def _log(container=None, location=None, option=None):
-                '''
-                Looks for logs from pod in specified location with option for error/out
-                '''
-                # files = {
-                #         'supervisor' : "",
-                #         'supervisor-error' : "",
-                #         'supervisor-out' : ""
-                #     }
-
-                # if location == 'supervisor':
-                #     logfile = files['supervisor-%s' % option]
-
-                
+            def _log():
                 with open(ochopod.LOG, 'r+') as log:
+                    lines = [line for line in log]
+                    return json.dumps(lines), 200
+
+            #
+            # - external hook exposing our circular log
+            # - reverse and dump ochopod.log as a json array
+            #
+            @web.route('/log/app', methods=['POST'])
+            def _log():
+                with open(ochopod.PROC_LOG, 'r+') as log:
                     lines = [line for line in log]
                     return json.dumps(lines), 200
 
