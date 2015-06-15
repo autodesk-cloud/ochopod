@@ -27,7 +27,7 @@ from ochopod.core.core import SAMPLING
 from ochopod.core.fsm import Aborted, FSM, diagnostic
 from pykka import ThreadingFuture
 from subprocess import Popen, PIPE, STDOUT
-from multiprocessing import Process
+from threading import Thread
 
 #: Our ochopod logger.
 logger = logging.getLogger('ochopod')
@@ -393,7 +393,7 @@ class Actor(FSM, Piped):
         # - start a polling thread that logs output from the data.sub callback
         #
         try:
-            out = Process(target=self.log_proc_out, args=(data.sub,))
+            out = Thread(target=self.log_proc_out, args=(data.sub,))
             out.daemon = True
             out.start()
 
