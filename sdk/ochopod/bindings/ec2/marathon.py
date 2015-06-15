@@ -251,7 +251,7 @@ class Pod(EC2Marathon):
                 with (open(ochopod.PROC_LOG, 'r+') if loc == 'app' else open(ochopod.LOG, 'r+')) as log:
                     lines = [line for line in log]
                     return json.dumps(lines), 200
-
+                    
             #
             # - web-hook used to receive requests from the leader or the CLI tools
             # - those requests are passed down to the executor actor
