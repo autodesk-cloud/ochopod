@@ -26,7 +26,7 @@ __version__ = '1.0.0'
 
 #: the location on disk used for reporting back to the CLI (e.g our rotating file log)
 LOG = '/var/log/ochopod.log'
-
+PROC_LOG = 'var/log/proc.log'
 #
 # - load our logging configuration from resources/log.cfg
 # - make sure to not reset existing loggers
@@ -50,11 +50,16 @@ def enable_cli_log(debug=0):
     # - an IOError here would mean we don't have the permission to write to /var/log for some reason (just skip)
     #
     logger = logging.getLogger('ochopod')
+    proc_log = logging.getLogger('proc')
     try:
         handler = RotatingFileHandler(LOG, maxBytes=32764, backupCount=3)
         handler.setLevel(INFO)
         handler.setFormatter(Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         logger.addHandler(handler)
+        proc_handler = RotatingFileHandler(PROC_LOG, maxBytes=32764, backupCount=3)
+        proc_handler.setLevel(INFO)
+        proc_handler.setFormatter(Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        proc_log.addHandler(proc_handler)
 
     except IOError:
         pass
@@ -64,4 +69,6 @@ def enable_cli_log(debug=0):
     #
     if debug:
         for handler in logger.handlers:
+            handler.setLevel(DEBUG)
+        for handler in proc_log.handlers:
             handler.setLevel(DEBUG)

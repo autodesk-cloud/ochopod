@@ -26,11 +26,12 @@ from ochopod.api import Cluster, Piped
 from ochopod.core.core import SAMPLING
 from ochopod.core.fsm import Aborted, FSM, diagnostic
 from pykka import ThreadingFuture
-from subprocess import Popen
+from subprocess import Popen, PIPE, STDOUT
+from multiprocessing import Process
 
 #: Our ochopod logger.
 logger = logging.getLogger('ochopod')
-
+proc_log = logging.getLogger('proc')
 
 class _Cluster(Cluster):
     """
@@ -345,10 +346,8 @@ class Actor(FSM, Piped):
                     env.update(data.env)
                     tokens = data.command if self.shell else data.command.split(' ')
                     #data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell)
-                    with open(os.path.join(self.cwd, 'out.log'), 'a') as outlog, open(os.path.join(self.cwd, 'err.log'), 'a') as errlog:
-                        #outlog.flush()
-                        #errlog.flush()
-                        data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell, stdout=outlog, stderr=errlog)
+                    data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell, stdout=PIPE, stderr=STDOUT)
+                    self.start_proc(data)
                     data.pids += 1
                     self.hints['process'] = 'running'
                     logger.info('%s : popen() #%d -> started <%s> as pid %s' % (self.path, data.pids, data.command, data.sub.pid))
@@ -372,6 +371,34 @@ class Actor(FSM, Piped):
 
         self.commands.popleft()
         return 'spin', data, 0
+
+
+    def log_proc_out(self, pid):
+        #
+        # - Log any stdout or stderr from data.sub
+        #
+        proc_log.info('Configure callback log initialised...')
+        while True:
+            nextline = pid.stdout.readline()
+            code = pid.poll()
+            if nextline == '' and code is not None:
+                proc_log.info('Configure callback terminated.')
+                break
+            if nextline != '':
+                proc_log.info(nextline)
+            time.sleep(0.2)
+
+    def start_proc(self, data):
+        #
+        # - start a polling thread that logs output from the data.sub callback
+        #
+        try:
+            out = Process(target=self.log_proc_out, args=(data.sub,))
+            out.daemon = True
+            out.start()
+
+        except Exception as e:
+            raise e
 
     def check(self, data):
 
