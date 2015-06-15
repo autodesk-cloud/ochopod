@@ -12,14 +12,15 @@ __________
 
 .. automodule:: api
 .. autoclass:: Model
+   :members: probe
 .. autoclass:: Cluster
    :members: dependencies, index, key, pods, seq, size, grep
 .. autoclass:: LifeCycle
-   :members: initialize, can_configure, configure, sanity_check, tear_down, signaled, finalize
+   :members: initialize, can_configure, configure, configured, sanity_check, tear_down, signaled, finalize
 .. autoclass:: Reactive
-   :members: damper, depends_on, full_shutdown, grace, sequential
+   :members: probe_every, damper, depends_on, full_shutdown, grace, sequential
 .. autoclass:: Piped
-   :members: checks, cwd, grace, shell, strict
+   :members: checks, check_every, cwd, grace, shell, strict, soft
 
 Bindings
 ________

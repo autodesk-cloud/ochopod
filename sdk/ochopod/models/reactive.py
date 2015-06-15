@@ -376,6 +376,12 @@ class Actor(FSM, Reactive):
                 replies = _control('on')
                 assert all(code == 200 for _, code in replies), '1+ pods failing to configure or unreachable'
 
+                #
+                # - operation successful -> ask each pod to run its configured() callback
+                # - just fire & forget
+                #
+                _control('ok')
+
             #
             # - in any case update the md5 hash
             # - update also our /snapshot node (which will propagate if this cluster is a dependency for somebody else)

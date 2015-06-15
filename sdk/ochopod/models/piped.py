@@ -88,15 +88,21 @@ class Actor(FSM, Piped):
     def can_configure(self, js):
         pass
 
+    def configured(self, js):
+        pass
+
+    def sanity_check(self, running):
+        pass
+
+    def finalize(self):
+        pass
+
     def configure(self, js):
 
         #
         # - this is the only method that *must* be implemented by the user
         #
         raise NotImplementedError
-
-    def sanity_check(self, running):
-        pass
 
     def tear_down(self, running):
         
@@ -105,9 +111,6 @@ class Actor(FSM, Piped):
         # - this should be good enough in the vast majority of cases
         #
         running.terminate()
-
-    def finalize(self):
-        pass
 
     def initial(self, data):
 
@@ -123,11 +126,12 @@ class Actor(FSM, Piped):
 
     def reset(self, data):
 
-        #
-        # - the state-machine will often be reset on purpose
-        # - this happens when we need to first terminate the process
-        #
-        if data.sub:
+        if data.sub and data.sub.poll() is None:
+
+            #
+            # - the state-machine will often be reset on purpose
+            # - this happens when we need to first terminate the process
+            #
             try:
                 logger.info('%s : tearing down process %s' % (self.path, data.sub.pid))
                 self.hints['process'] = 'terminating'
@@ -161,6 +165,14 @@ class Actor(FSM, Piped):
                     #
                     return 'wait_for_termination', data, SAMPLING
 
+                elif self.soft:
+
+                    #
+                    # - if the soft switch is on bypass the SIGKILL completely
+                    # - this is a special case to handle peculiar scenarios
+                    #
+                    logger.info('%s: bypassing the forced termination (leaking pid %s)...' % (self.path, data.sub.pid))
+
                 else:
 
                     #
@@ -174,7 +186,8 @@ class Actor(FSM, Piped):
                     except Exception as _:
                         pass
 
-            logger.debug('%s : pid %s terminated in %d seconds' % (self.path, data.sub.pid, int(elapsed)))
+            else:
+                logger.debug('%s : pid %s terminated in %d seconds' % (self.path, data.sub.pid, int(elapsed)))
 
         data.sub = None
         self.hints['process'] = 'stopped'
@@ -320,10 +333,12 @@ class Actor(FSM, Piped):
                     # - run the configuration procedure if we have some json
                     # - we'll use whatever it returns to popen() a new process
                     # - keep track of the shell command line returned by configure() for later
+                    # - make sure the optional overrides set by configure() are strings
                     #
                     cluster = _Cluster(data.js)
                     logger.info('%s : configuring pod %d/%d' % (self.path, 1 + cluster.index, cluster.size))
-                    data.command, data.env = self.configure(cluster)
+                    data.command, overrides = self.configure(cluster)
+                    data.env = {key: str(value) for key, value in overrides.items()}
                     self.last = data.js
 
                 assert data.command, 'request to start process while not yet configured (user error ?)'
@@ -332,8 +347,6 @@ class Actor(FSM, Piped):
                 # - spawn a new sub-process if the auto-start flag is on OR if we already ran at least once
                 # - the start flag comes from the $ochopod_start environment variable
                 #
-                now = time.time()
-
                 if not data.js or self.start or data.pids > 0:
 
                     #
@@ -345,7 +358,6 @@ class Actor(FSM, Piped):
                     env = deepcopy(self.env)
                     env.update(data.env)
                     tokens = data.command if self.shell else data.command.split(' ')
-                    #data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell)
                     data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell, stdout=PIPE, stderr=STDOUT)
                     self.start_proc(data)
                     data.pids += 1
@@ -377,12 +389,12 @@ class Actor(FSM, Piped):
         #
         # - Log any stdout or stderr from data.sub
         #
-        proc_log.info('Configure callback log initialised...')
+        proc_log.info('configure() callback log initialised...')
         while True:
             nextline = pid.stdout.readline()
             code = pid.poll()
             if nextline == '' and code is not None:
-                proc_log.info('Configure callback terminated.')
+                proc_log.info('configure() callback terminated.')
                 break
             if nextline != '':
                 proc_log.info(nextline)
@@ -491,11 +503,33 @@ class Actor(FSM, Piped):
         self.commands.popleft()
         return 'spin', data, 0
 
+    def ok(self, data):
+
+        try:
+
+            assert data.js, 'control/ok received out of context (leader bug ?)'
+            logger.debug('%s : cluster has been formed, invoking configured()' % self.path)
+            cluster = _Cluster(data.js)
+            self.configured(cluster)
+            reply = {}, 200
+
+        except Exception as failure:
+
+            #
+            # - abort on a 500 upon any failure
+            #
+            reply = {}, 500
+            logger.warning('%s : failed to signal -> %s' % (self.path, diagnostic(failure)))
+
+        data.latch.set(reply)
+        self.commands.popleft()
+        return 'spin', data, 0
+
     def specialized(self, msg):
 
         assert 'request' in msg, 'bogus message received ?'
         req = msg['request']
-        if req in ['on', 'check', 'off', 'kill', 'signal']:
+        if req in ['check', 'on', 'off', 'ok', 'kill', 'signal']:
 
             #
             # - we got a request from the leader or the CLI

@@ -43,8 +43,9 @@ if __name__ == '__main__':
             # - simply return what you wish to run (a simple shell statement in our case)
             # - deriving from Piped means the SDK will use popen() to fork an ancillary process
             # - you can also set optional environment variables on that process (presently $LAPSE)
+            # - note that whatever value you pass will be turned into a string (e.g you can use numbers)
             #
-            return "sleep $LAPSE && echo 'hello world' && exit 0", {'LAPSE': '5'}
+            return "sleep $LAPSE && echo 'hello world' && exit 0", {'LAPSE': 5}
 
     #
     # - that's it, just boot the SDK with your process strategy
