@@ -387,11 +387,11 @@ class Actor(FSM, Piped):
 
     def log_proc_out(self, pid):
         #
-        # - Log any stdout or stderr from data.sub
+        # - Log any stdout or stderr from data.sub by polling the Popen
         #
         proc_log.info('configure() callback log initialised...')
         while True:
-            nextline = pid.stdout.readline()
+            nextline = pid.stdout.readline().rstrip('\n')
             code = pid.poll()
             if nextline == '' and code is not None:
                 proc_log.info('configure() callback terminated.')
