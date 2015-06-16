@@ -351,7 +351,7 @@ class Actor(FSM, Piped):
 
                     #
                     # - combine our environment variables with the overrides from configure()
-                    # - popen() the new process
+                    # - popen() the new process and log stdout/stderr in separate thread
                     # - reset the sanity check counter
                     # - keep track of its pid to kill it later on
                     #
@@ -398,7 +398,6 @@ class Actor(FSM, Piped):
                 break
             if nextline != '':
                 proc_log.info(nextline)
-            time.sleep(0.2)
 
     def start_proc(self, data):
         #

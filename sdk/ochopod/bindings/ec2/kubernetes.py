@@ -242,7 +242,7 @@ class Pod(EC2Kubernetes):
                 return json.dumps(subset), 200
 
             #
-            # - external hook exposing our circular log
+            # - external hook exposing our circular log for the pod and its configure() callback (app)
             # - reverse and dump ochopod.log as a json array
             #
             @web.route('/log', methods=['POST'])
