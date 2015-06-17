@@ -246,9 +246,8 @@ class Pod(EC2Marathon):
             # - reverse and dump ochopod.log as a json array
             #
             @web.route('/log', methods=['POST'])
-            @web.route('/log/<loc>', methods=['POST'])
             def _log(loc=None):
-                with (open(ochopod.PROC_LOG, 'r+') if loc == 'app' else open(ochopod.LOG, 'r+')) as log:
+                with (open(ochopod.LOG, 'r+')) as log:
                     lines = [line for line in log]
                     return json.dumps(lines), 200
 

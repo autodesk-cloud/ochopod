@@ -31,7 +31,6 @@ from threading import Thread
 
 #: Our ochopod logger.
 logger = logging.getLogger('ochopod')
-proc_log = logging.getLogger('proc')
 
 class _Cluster(Cluster):
     """
@@ -359,7 +358,8 @@ class Actor(FSM, Piped):
                     env.update(data.env)
                     tokens = data.command if self.shell else data.command.split(' ')
                     data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell, stdout=PIPE, stderr=STDOUT)
-                    self.start_proc(data)
+                    if self.log_proc:
+                        self.start_proc(data)
                     data.pids += 1
                     self.hints['process'] = 'running'
                     logger.info('%s : popen() #%d -> started <%s> as pid %s' % (self.path, data.pids, data.command, data.sub.pid))
@@ -384,20 +384,18 @@ class Actor(FSM, Piped):
         self.commands.popleft()
         return 'spin', data, 0
 
-
-    def log_proc_out(self, pid):
+    def log_proc_out(self, proc):
         #
         # - Log any stdout or stderr from data.sub by polling the Popen
         #
-        proc_log.info('configure() callback log initialised...')
         while True:
-            nextline = pid.stdout.readline().rstrip('\n')
-            code = pid.poll()
+            nextline = proc.stdout.readline().rstrip('\n')
+            code = proc.poll()
             if nextline == '' and code is not None:
-                proc_log.info('configure() callback terminated.')
+                logger.info('(pid {0}): Terminated with code {1}.'.format(proc.pid, code))
                 break
             if nextline != '':
-                proc_log.info(nextline)
+                logger.info('(pid {0} output): {1}'.format(proc.pid, nextline))
 
     def start_proc(self, data):
         #
