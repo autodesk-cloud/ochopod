@@ -247,7 +247,7 @@ class Pod(EC2Kubernetes):
             #
             @web.route('/log', methods=['POST'])
             def _log():
-                with (open(ochopod.LOG, 'r+')) as log:
+                with open(ochopod.LOG, 'r+') as log:
                     lines = [line for line in log]
                     return json.dumps(lines), 200
 
