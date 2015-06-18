@@ -18,6 +18,7 @@ import json
 import logging
 import pykka
 import time
+import os
 
 from collections import deque
 from copy import deepcopy
@@ -25,11 +26,11 @@ from ochopod.api import Cluster, Piped
 from ochopod.core.core import SAMPLING
 from ochopod.core.fsm import Aborted, FSM, diagnostic
 from pykka import ThreadingFuture
-from subprocess import Popen
+from subprocess import Popen, PIPE, STDOUT
+from threading import Thread
 
 #: Our ochopod logger.
 logger = logging.getLogger('ochopod')
-
 
 class _Cluster(Cluster):
     """
@@ -349,14 +350,23 @@ class Actor(FSM, Piped):
 
                     #
                     # - combine our environment variables with the overrides from configure()
-                    # - popen() the new process
+                    # - popen() the new process and log stdout/stderr in separate thread
                     # - reset the sanity check counter
                     # - keep track of its pid to kill it later on
                     #
                     env = deepcopy(self.env)
                     env.update(data.env)
                     tokens = data.command if self.shell else data.command.split(' ')
-                    data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell)
+                    data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell, stdout=PIPE, stderr=STDOUT)
+                    
+                    #
+                    # - Spawn new logging subprocess to pipe to our logger if flagged to do so
+                    #
+                    if self.pipe_subprocess:
+                        out = Thread(target=self._pipe, args=(data.sub,))
+                        out.daemon = True
+                        out.start()
+
                     data.pids += 1
                     self.hints['process'] = 'running'
                     logger.info('%s : popen() #%d -> started <%s> as pid %s' % (self.path, data.pids, data.command, data.sub.pid))
@@ -380,6 +390,17 @@ class Actor(FSM, Piped):
 
         self.commands.popleft()
         return 'spin', data, 0
+
+    def _pipe(self, proc):
+        #
+        # - Log any stdout or stderr from data.sub by polling the Popen in data.sub
+        #
+        while True:
+            nextline = proc.stdout.readline().rstrip('\n')
+            code = proc.poll()
+            if nextline == '' and code is not None:
+                break
+            logger.info('(pid %s output): %s' % (proc.pid, nextline))
 
     def check(self, data):
 
