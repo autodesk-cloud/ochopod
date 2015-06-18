@@ -373,7 +373,7 @@ class Piped(LifeCycle):
     #: cluster capacity up or down.
     strict = False
 
-    #: If true the pod will pipe the stdout/stderr from its callback() subprocess to the ochopod log.
+    #: If true the pod will pipe stdout/stderr from the sub-process into the ochopod log.
     pipe_subprocess = False
 
 class Binding(object):

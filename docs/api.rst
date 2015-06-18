@@ -20,7 +20,7 @@ __________
 .. autoclass:: Reactive
    :members: probe_every, damper, depends_on, full_shutdown, grace, sequential
 .. autoclass:: Piped
-   :members: checks, check_every, cwd, grace, shell, strict, soft
+   :members: checks, check_every, cwd, grace, pipe_subprocess, shell, strict, soft
 
 Bindings
 ________
