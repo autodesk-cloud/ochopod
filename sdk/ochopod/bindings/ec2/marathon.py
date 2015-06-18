@@ -228,6 +228,7 @@ class Pod(EC2Marathon):
                     [
                         'application',
                         'ip',
+                        'metrics',
                         'node',
                         'port',
                         'ports',
