@@ -399,10 +399,8 @@ class Actor(FSM, Piped):
             nextline = proc.stdout.readline().rstrip('\n')
             code = proc.poll()
             if nextline == '' and code is not None:
-                logger.warning('(pid {0}): Terminated with code {1}.'.format(proc.pid, code))
                 break
-            if nextline != '':
-                logger.info('(pid {0} output): {1}'.format(proc.pid, nextline))
+            logger.info('(pid %s output): %s' % (proc.pid, nextline))
 
     def check(self, data):
 
