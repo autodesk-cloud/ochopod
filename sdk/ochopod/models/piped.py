@@ -397,17 +397,6 @@ class Actor(FSM, Piped):
         self.commands.popleft()
         return 'spin', data, 0
 
-    def _pipe(self, proc):
-        #
-        # - Log any stdout or stderr from data.sub by polling the Popen in data.sub
-        #
-        while True:
-            nextline = proc.stdout.readline().rstrip('\n')
-            code = proc.poll()
-            if nextline == '' and code is not None:
-                break
-            logger.info('(pid %s output): %s' % (proc.pid, nextline))
-
     def check(self, data):
 
         try:
@@ -551,3 +540,17 @@ class Actor(FSM, Piped):
         #
         for token in tokens:
             self.commands.append((token, {}, ThreadingFuture()))
+
+    def _pipe(self, proc):
+
+        #
+        # - Log any stdout or stderr from data.sub by polling the Popen in data.sub
+        #
+        while True:
+
+            line = proc.stdout.readline().rstrip('\n')
+            code = proc.poll()
+            if line == '' and code is not None:
+                break
+
+            logger.info('pid %s : %s' % (proc.pid, line))
