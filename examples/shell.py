@@ -37,6 +37,11 @@ if __name__ == '__main__':
         #
         shell = True
 
+        #
+        # - you can also pipe the sub-process stderr/out and include them in the pod log
+        #
+        pipe_subprocess = True
+
         def configure(self, _):
 
             #
