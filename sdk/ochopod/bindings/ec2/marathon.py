@@ -242,11 +242,11 @@ class Pod(EC2Marathon):
                 return json.dumps(subset), 200
 
             #
-            # - external hook exposing our circular log for the pod and its configure() callback (app)
+            # - external hook exposing our circular log
             # - reverse and dump ochopod.log as a json array
             #
             @web.route('/log', methods=['POST'])
-            def _log(loc=None):
+            def _log():
                 with (open(ochopod.LOG, 'r+')) as log:
                     lines = [line for line in log]
                     return json.dumps(lines), 200

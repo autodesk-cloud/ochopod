@@ -374,7 +374,7 @@ class Piped(LifeCycle):
     strict = False
 
     #: If true the pod will pipe the stdout/stderr from its callback() subprocess to the ochopod log.
-    log_proc = False
+    pipe_subprocess = False
 
 class Binding(object):
     """

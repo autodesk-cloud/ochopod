@@ -24,7 +24,7 @@ from os.path import dirname
 #: our package version
 __version__ = '1.0.1'
 
-#: the location on disk used for reporting back to the CLI (i.e. our rotating file logs)
+#: the location on disk used for reporting back to the CLI (e.g. our rotating file log)
 LOG = '/var/log/ochopod.log'
 
 #
@@ -45,7 +45,7 @@ def enable_cli_log(debug=0):
     """
 
     #
-    # - add a small capacity rotating log for the pod and its callback
+    # - add a small capacity rotating log
     # - this will be persisted in the container's filesystem and retrieved via /log requests
     # - an IOError here would mean we don't have the permission to write to /var/log for some reason (just skip)
     #

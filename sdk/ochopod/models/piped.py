@@ -358,8 +358,15 @@ class Actor(FSM, Piped):
                     env.update(data.env)
                     tokens = data.command if self.shell else data.command.split(' ')
                     data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell, stdout=PIPE, stderr=STDOUT)
-                    if self.log_proc:
-                        self.start_proc(data)
+                    
+                    #
+                    # - Spawn new logging subprocess to pipe to our logger if flagged to do so
+                    #
+                    if self.pipe_subprocess:
+                        out = Thread(target=self._pipe, args=(data.sub,))
+                        out.daemon = True
+                        out.start()
+
                     data.pids += 1
                     self.hints['process'] = 'running'
                     logger.info('%s : popen() #%d -> started <%s> as pid %s' % (self.path, data.pids, data.command, data.sub.pid))
@@ -384,30 +391,18 @@ class Actor(FSM, Piped):
         self.commands.popleft()
         return 'spin', data, 0
 
-    def log_proc_out(self, proc):
+    def _pipe(self, proc):
         #
-        # - Log any stdout or stderr from data.sub by polling the Popen
+        # - Log any stdout or stderr from data.sub by polling the Popen in data.sub
         #
         while True:
             nextline = proc.stdout.readline().rstrip('\n')
             code = proc.poll()
             if nextline == '' and code is not None:
-                logger.info('(pid {0}): Terminated with code {1}.'.format(proc.pid, code))
+                logger.warning('(pid {0}): Terminated with code {1}.'.format(proc.pid, code))
                 break
             if nextline != '':
                 logger.info('(pid {0} output): {1}'.format(proc.pid, nextline))
-
-    def start_proc(self, data):
-        #
-        # - start a polling thread that logs output from the data.sub callback
-        #
-        try:
-            out = Thread(target=self.log_proc_out, args=(data.sub,))
-            out.daemon = True
-            out.start()
-
-        except Exception as e:
-            raise e
 
     def check(self, data):
 
