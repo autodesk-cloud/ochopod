@@ -267,7 +267,7 @@ class Actor(FSM, Piped):
                     if data.sub:
                         logger.debug('%s : running the sanity-check (pid %s)' % (self.path, data.sub.pid))
                         met = self.sanity_check(data.sub.pid)
-                        
+
                         if self.metrics:
                             self.hints['metrics'] = met
 
@@ -285,7 +285,7 @@ class Actor(FSM, Piped):
                     logger.warning('%s : sanity check (%d/%d) failed -> %s' %
                                    (self.path, self.checks - data.checks, self.checks, diagnostic(failure)))
                     
-                    if self.metrics:
+                    if self.metrics and 'metrics' in self.hints:
                         del self.hints['metrics']
 
                     if not data.checks:

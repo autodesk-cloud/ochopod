@@ -269,7 +269,7 @@ class LifeCycle(object):
         Optional callback invoked at regular interval to check on the underlying process run by the pod. Any exception
         thrown in here will mean that the process should be torn down and restarted. You can typically use this
         mechanism to implement fined-grained control on how your process is behaving (for instance by gathering metrics
-        or by querying some REST API). Should return metrics in a :class:`dict`. 
+        or by querying some REST API). Should return metrics in a dict. 
 
         :type process: :class:`subprocess.Popen`
         :param process: the underlying process run by the pod
