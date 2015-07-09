@@ -266,7 +266,10 @@ class Actor(FSM, Piped):
 
                     if data.sub:
                         logger.debug('%s : running the sanity-check (pid %s)' % (self.path, data.sub.pid))
-                        self.sanity_check(data.sub.pid)
+                        met = self.sanity_check(data.sub.pid)
+
+                        if self.metrics:
+                            self.hints['metrics'] = met
 
                     data.checks = self.checks
                     data.failed = 0
@@ -281,6 +284,9 @@ class Actor(FSM, Piped):
                     data.failed = 0
                     logger.warning('%s : sanity check (%d/%d) failed -> %s' %
                                    (self.path, self.checks - data.checks, self.checks, diagnostic(failure)))
+                    
+                    if self.metrics and 'metrics' in self.hints:
+                        del self.hints['metrics']
 
                     if not data.checks:
                         logger.warning('%s : turning pod off' % self.path)
