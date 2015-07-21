@@ -268,11 +268,16 @@ class LifeCycle(object):
         """
         Optional callback invoked at regular interval to check on the underlying process run by the pod. Any exception
         thrown in here will mean that the process should be torn down and restarted. You can typically use this
-        mechanism to implement fined-grained control on how your process is behaving (for instance by gathering metrics
-        or by querying some REST API). Should return metrics in a dict. 
+        mechanism to implement fined-grained control on how your process is behaving (for instance by by querying
+        some REST API on localhost or by looking at log files).
+
+        This method provides also a way to report arbitrary metrics. An optional dict may be returned to set the
+        pod's metrics (which are accessible via a GET /info request). Please note those metrics will be returned as
+        serialized json.
 
         :type process: :class:`subprocess.Popen`
         :param process: the underlying process run by the pod
+        :rtype: a dict that will be used as the pod metrics or None
         """
         pass
 
@@ -359,6 +364,9 @@ class Piped(LifeCycle):
     #: and/or the soft switch).
     grace = 60.0
 
+    #: If true the pod will pipe stdout/stderr from the sub-process into the ochopod log.
+    pipe_subprocess = False
+
     #: If true the sub-process will interpret its command line as a shell command (e.g you can use pipes for instance).
     shell = False
 
@@ -373,11 +381,6 @@ class Piped(LifeCycle):
     #: cluster capacity up or down.
     strict = False
 
-    #: If true the pod will pipe stdout/stderr from the sub-process into the ochopod log.
-    pipe_subprocess = False
-
-    # If true the pod will set a metrics dict, returned during sanity_check(), in its hints dict.
-    metrics = False
 
 class Binding(object):
     """

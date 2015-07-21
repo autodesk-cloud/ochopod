@@ -22,7 +22,7 @@ from logging.handlers import RotatingFileHandler
 from os.path import dirname
 
 #: our package version
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 #: the location on disk used for reporting back to the CLI (e.g. our rotating file log)
 LOG = '/var/log/ochopod.log'

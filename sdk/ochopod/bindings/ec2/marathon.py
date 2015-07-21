@@ -195,6 +195,7 @@ class Pod(EC2Marathon):
             latch = ThreadingFuture()
             logger.info('starting %s.%s (marathon/ec2) @ %s' % (hints['namespace'], hints['cluster'], hints['node']))
             breadcrumbs = deepcopy(hints)
+            hints['metrics'] = {}
             env.update({'ochopod': json.dumps(hints)})
             executor = lifecycle.start(env, latch, hints)
             coordinator = Coordinator.start(

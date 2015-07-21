@@ -18,6 +18,7 @@ import json
 import logging
 import ochopod
 import pykka
+import time
 import uuid
 
 from flask import Flask, request
@@ -27,6 +28,7 @@ from kazoo.recipe.lock import LockTimeout
 from ochopod.core.fsm import shutdown, spin_lock, Aborted, FSM
 from pykka import ThreadingFuture, Timeout
 from threading import Event
+
 
 #: Our ochopod logger
 logger = logging.getLogger('ochopod')
@@ -107,6 +109,7 @@ class ZK(FSM):
         data.zk = KazooClient(hosts=cnx_string, timeout=5.0, read_only=0, randomize_hosts=1)
         data.zk.add_listener(self.feedback)
         data.zk.start()
+        data.n = 0
 
         return 'wait_for_cnx', data, 0
 
@@ -156,6 +159,7 @@ class ZK(FSM):
             return 'wait_for_cnx', data, 5.0 * SAMPLING
 
         logger.debug('%s : registered as %s (#%d)' % (self.path, self.id, self.seq))
+        data.connected_at = time.time()
         return 'spin', data, 0
 
     def spin(self, data):
@@ -174,7 +178,8 @@ class ZK(FSM):
             # - ZK disconnects (LOST or SUSPENDED) are simply flagged when exceptions are raised
             #
             state = msg['state']
-            logger.debug('%s : zk state change -> %s (%s)' % (self.path, str(state), 'connected' if self.connected else 'disconnected'))
+            current = 'connected' if self.connected else 'disconnected'
+            logger.debug('%s : zk state change -> "%s" (%s)' % (self.path, str(state), current))
             if self.connected and state != KazooState.CONNECTED:
                 logger.warning('%s : lost connection (%s) / forcing a reset' % (self.path, str(state)))
                 self.force_reset = 1
@@ -219,6 +224,14 @@ class Coordinator(ZK):
             #
             shutdown(data.controller)
 
+        if hasattr(data, 'lock'):
+
+            #
+            # - make sure to remove the lock attribute
+            # - it's useless to release the lock as we'll release the client altogether
+            #
+            delattr(data, 'lock')
+
         return super(Coordinator, self).reset(data)
 
     def spin(self, data):
@@ -231,42 +244,44 @@ class Coordinator(ZK):
 
         #
         # - attempt to fetch the lock
+        # - allocate it if not already done
+        # - it is *important* to just allocate one lock as there is a leak in kazoo
         #
-        lock = data.zk.Lock('%s/coordinator' % self.prefix)
+        if not hasattr(data, 'lock'):
+            data.lock = data.zk.Lock('%s/coordinator' % self.prefix)
+
         try:
 
             #
-            # - the kazoo lock recipe seems to be sensitive if being switched to SUSPENDED .. in order to
-            #   avoid stalling on the lock (which is the default behavior), attempt to lock multiple time
-            #   with a short timeout (e.g spin-lock)
+            # - attempt to lock within a 5 seconds timeout to avoid stalling in some cases
             #
-            if hasattr(data, 'lock') and data.lock:
-                try:
-                    data.lock.release()
-                except ConnectionClosedError:
-                    pass
-
-            data.lock = None
-            lock.acquire(timeout=SAMPLING)
-            logger.debug('%s : lock acquired @ %s, now leading' % (self.path, self.prefix))
-            data.lock = lock
-
-            #
-            # - we have the lock (e.g we are the leader)
-            # - start the controller actor
-            #
-            data.latch = ThreadingFuture()
-            data.controller = self.model.start(data.zk, self.id, self.hints, self.scope, self.tag, self.port, data.latch)
-            return 'lock', data, 0
+            if data.lock.acquire(timeout=5.0 * SAMPLING):
+                return 'start_controller', data, 0
 
         except LockTimeout:
             pass
 
-        #
-        # - we could not obtain the lock
-        # - blindly loop back and attempt to get it again
-        #
         return 'spin', data, 0
+
+    def start_controller(self, data):
+
+        #
+        # - if the termination trigger is set, abort immediately
+        # - this is important as it is possible to somehow get the lock after a suspend (acquire() returns
+        #   true in that case which is misleading)
+        #
+        if self.force_reset or self.terminate:
+            raise Aborted('resetting')
+
+        #
+        # - we have the lock (e.g we are the leader)
+        # - start the controller actor
+        #
+        data.latch = ThreadingFuture()
+        logger.debug('%s : lock acquired @ %s, now leading' % (self.path, self.prefix))
+        data.controller = self.model.start(data.zk, self.id, self.hints, self.scope, self.tag, self.port, data.latch)
+
+        return 'lock', data, 0
 
     def lock(self, data):
 

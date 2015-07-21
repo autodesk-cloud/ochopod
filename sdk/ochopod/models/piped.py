@@ -90,7 +90,7 @@ class Actor(FSM, Piped):
     def configured(self, js):
         pass
 
-    def sanity_check(self, running):
+    def sanity_check(self, process):
         pass
 
     def finalize(self):
@@ -195,6 +195,7 @@ class Actor(FSM, Piped):
     def spin(self, data):
 
         if self.terminate:
+
             if not data.sub:
 
                 #
@@ -221,13 +222,49 @@ class Actor(FSM, Piped):
             data.latch = latch
             return req, data, 0
 
-        else:
+        elif data.sub:
 
             #
             # - check if the process is still running
             #
             now = time.time()
-            if data.sub and data.sub.poll() is not None:
+            if data.sub.poll() is None:
+
+                if now >= data.next_sanity_check:
+
+                    #
+                    # - schedule the next sanity check
+                    # - assert if the process aborted since the last one
+                    #
+                    data.next_sanity_check = now + self.check_every
+
+                    try:
+                        assert not data.failed, \
+                            '%s : too many process failures (%d since last check)' % (self.path, data.failed)
+
+                        js = self.sanity_check(data.sub.pid)
+                        self.hints['metrics'] = {} if js is None else js
+                        data.checks = self.checks
+                        data.failed = 0
+
+                    except Exception as failure:
+
+                        #
+                        # - any failure trapped during the sanity check will decrement our counter
+                        # - eventually the process is stopped (up to the user to decide what to do)
+                        #
+                        data.checks -= 1
+                        data.failed = 0
+                        logger.warning('%s : sanity check (%d/%d) failed -> %s' %
+                                       (self.path, self.checks - data.checks, self.checks, diagnostic(failure)))
+
+                        if not data.checks:
+                            logger.warning('%s : turning pod off' % self.path)
+                            data.checks = self.checks
+                            self._request(['off'])
+
+            else:
+
                 code = data.sub.returncode
                 if not code:
 
@@ -249,48 +286,12 @@ class Actor(FSM, Piped):
                     logger.error('%s : pid %s died (code %d), re-running' % (self.path, data.sub.pid, code))
                     self._request(['off', 'on'])
 
+        else:
+
             #
-            # - run the user-defined sanity check once in a while
+            # - reset by default the metrics if the sub-process is not running
             #
-            if now >= data.next_sanity_check:
-                data.next_sanity_check = now + self.check_every
-                try:
-
-                    #
-                    # - assert if the process aborted since the last sanity check
-                    # - run the sanity check and schedule the next one
-                    # - reset it each time
-                    #
-                    assert not data.failed, \
-                        '%s : too many process failures (%d since last check)' % (self.path, data.failed)
-
-                    if data.sub:
-                        logger.debug('%s : running the sanity-check (pid %s)' % (self.path, data.sub.pid))
-                        met = self.sanity_check(data.sub.pid)
-
-                        if self.metrics:
-                            self.hints['metrics'] = met
-
-                    data.checks = self.checks
-                    data.failed = 0
-                    
-                except Exception as failure:
-        
-                    #
-                    # - any failure trapped during the sanity check will decrement our counter
-                    # - eventually the process is stopped (up to the user to decide what to do)
-                    #
-                    data.checks -= 1
-                    data.failed = 0
-                    logger.warning('%s : sanity check (%d/%d) failed -> %s' %
-                                   (self.path, self.checks - data.checks, self.checks, diagnostic(failure)))
-                    
-                    if self.metrics and 'metrics' in self.hints:
-                        del self.hints['metrics']
-
-                    if not data.checks:
-                        logger.warning('%s : turning pod off' % self.path)
-                        self._request(['off'])
+            self.hints['metrics'] = {}
 
         return 'spin', data, SAMPLING
 
@@ -356,22 +357,55 @@ class Actor(FSM, Piped):
 
                     #
                     # - combine our environment variables with the overrides from configure()
-                    # - popen() the new process and log stdout/stderr in separate thread
+                    # - popen() the new process and log stdout/stderr in a separate thread if required
+                    # - make sure to set close_fds in order to avoid sharing the flask socket with the subprocess
                     # - reset the sanity check counter
                     # - keep track of its pid to kill it later on
                     #
                     env = deepcopy(self.env)
                     env.update(data.env)
                     tokens = data.command if self.shell else data.command.split(' ')
-                    data.sub = Popen(tokens, cwd=self.cwd, env=env, shell=self.shell, stdout=PIPE, stderr=STDOUT)
-                    
-                    #
-                    # - Spawn new logging subprocess to pipe to our logger if flagged to do so
-                    #
+
                     if self.pipe_subprocess:
-                        out = Thread(target=self._pipe, args=(data.sub,))
+
+                        #
+                        # - set the popen call to use piping if required
+                        # - spawn an ancillary thread to forward the lines to our logger
+                        # - this thread will go down automatically when the sub-process does
+                        #
+                        data.sub = Popen(tokens,
+                                         close_fds=True,
+                                         cwd=self.cwd,
+                                         env=env,
+                                         shell=self.shell,
+                                         stderr=STDOUT,
+                                         stdout=PIPE)
+
+                        def _pipe(process):
+
+                            while True:
+
+                                line = process.stdout.readline().rstrip('\n')
+                                code = process.poll()
+                                if line == '' and code is not None:
+                                    break
+
+                                logger.info('pid %s : %s' % (process.pid, line))
+
+                        out = Thread(target=_pipe, args=(data.sub,))
                         out.daemon = True
                         out.start()
+
+                    else:
+
+                        #
+                        # - default popen call without piping
+                        #
+                        data.sub = Popen(tokens,
+                                         close_fds=True,
+                                         cwd=self.cwd,
+                                         env=env,
+                                         shell=self.shell)
 
                     data.pids += 1
                     self.hints['process'] = 'running'
@@ -540,17 +574,3 @@ class Actor(FSM, Piped):
         #
         for token in tokens:
             self.commands.append((token, {}, ThreadingFuture()))
-
-    def _pipe(self, proc):
-
-        #
-        # - Log any stdout or stderr from data.sub by polling the Popen in data.sub
-        #
-        while True:
-
-            line = proc.stdout.readline().rstrip('\n')
-            code = proc.poll()
-            if line == '' and code is not None:
-                break
-
-            logger.info('pid %s : %s' % (proc.pid, line))

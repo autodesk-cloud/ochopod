@@ -32,7 +32,7 @@ setup(
     install_requires=
     [
         'flask>=0.10.1',
-        'kazoo>=2.0.0',
+        'kazoo>=2.2.1',
         'jinja2>=2.7.3',
         'pykka>=1.2.0'
     ],
