@@ -268,7 +268,7 @@ class LifeCycle(object):
         """
         Optional callback invoked at regular interval to check on the underlying process run by the pod. Any exception
         thrown in here will mean that the process should be torn down and restarted. You can typically use this
-        mechanism to implement fined-grained control on how your process is behaving (for instance by by querying
+        mechanism to implement fined-grained control on how your process is behaving (for instance by querying
         some REST API on localhost or by looking at log files).
 
         This method provides also a way to report arbitrary metrics. An optional dict may be returned to set the
