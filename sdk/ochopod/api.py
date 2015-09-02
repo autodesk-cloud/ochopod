@@ -272,7 +272,7 @@ class LifeCycle(object):
         some REST API on localhost or by looking at log files).
 
         This method provides also a way to report arbitrary metrics. An optional dict may be returned to set the
-        pod's metrics (which are accessible via a GET /info request). Please note those metrics will be returned as
+        pod's metrics (which are accessible via a POST /info request). Please note those metrics will be returned as
         serialized json.
 
         :type process: :class:`subprocess.Popen`
