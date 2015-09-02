@@ -36,13 +36,6 @@ setup(
         'jinja2>=2.7.3',
         'pykka>=1.2.0'
     ],
-    entry_points=
-    {
-        'console_scripts':
-            [
-                'ocho = ochopod.tools.main:go'
-            ]
-    },
     package_data={
         'ochopod':
             [
