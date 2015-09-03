@@ -4,6 +4,7 @@ ENV DEBIAN_FRONTEND noninteractive
 #
 # - update our repo
 # - add python 2.7 + some utilities
+# - note we explicitly add python-requests
 #
 RUN apt-get -y update && apt-get -y upgrade && apt-get -y install curl python python-requests supervisor
 
@@ -13,7 +14,7 @@ RUN apt-get -y update && apt-get -y upgrade && apt-get -y install curl python py
 # - start supervisor
 #
 ADD resources/supervisor/supervisord.conf /etc/supervisor/supervisord.conf
-ADD sdk /opt/ochopod
+ADD ochopod /opt/ochopod
 RUN cd /opt/ochopod && python setup.py install
 RUN apt-get -y autoremove
 CMD /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
