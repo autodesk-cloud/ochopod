@@ -94,10 +94,11 @@ running with more than 3 nodes. Finding out where the pods run and what ports th
 <h2>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="try-it-out-locally">
 <h3>Try it out locally<a class="headerlink" href="#try-it-out-locally" title="Permalink to this headline">¶</a></h3>
-<p>Simply run a local <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> server on your workstation. Then install the SDK and run the little <a class="reference external" href="https://github.com/autodesk-cloud/ochopod/blob/master/examples/shell.py">shell</a> example:</p>
-<div class="code python highlight-python"><div class="highlight"><pre>$ cd ochopod-python-sdk/sdk
-$ python setup.py install
-$ python ../examples/shell.py
+<p>Simply run a local <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> server on your workstation. Then install the sdk (make sure you have pip &amp; git installed),
+get the code and run the little <a class="reference external" href="https://github.com/autodesk-cloud/ochopod/blob/master/examples/shell.py">shell</a> example:</p>
+<div class="code python highlight-python"><div class="highlight"><pre>$ pip install git+https://github.com/autodeskcloud/ochopod.git
+$ git clone https://github.com/autodesk-cloud/ochopod.git
+$ python ochopod/examples/shell.py
 INFO - EC2 marathon bindings started
 INFO - running in local mode (make sure you run a standalone zookeeper)
 INFO - starting marathon.local (marathon/ec2) @ local
@@ -107,48 +108,19 @@ INFO - starting marathon.local (marathon/ec2) @ local
 <p>This pod will terminate after around 5 seconds and runs a trivial bash statement. You can tweak the code and
 experiment. Try turning your <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> server on/off and you&#8217;ll see the pod re-connecting automatically.</p>
 </div>
-<div class="section" id="a-real-zookeeper-ensemble-over-kubernetes">
-<h3>A real Zookeeper ensemble over Kubernetes !<a class="headerlink" href="#a-real-zookeeper-ensemble-over-kubernetes" title="Permalink to this headline">¶</a></h3>
-<p>It&#8217;s now time to do something a bit more realistic. Go peek at the <a class="reference external" href="https://github.com/autodesk-cloud/ochonetes/tree/master/images/zookeeper">container</a> we use as an example in another of our
-projects. Build and either push it to your hub account or private repository or build the image on each node within
-your cluster if you prefer. This container is a small example of how to run a containerized <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> ensemble over
-<a class="reference external" href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes</a>. Feel free to explore the code and see how it is done.</p>
-<p>OK, you have your new image and are now ready to spawn a <em>replication controller</em>. Since we&#8217;re running <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> make
-sure to expose ports 2181, 2888 and 3888. Also expose 8080 since this is our control port (e.g the port used by the
-pods to communicate). Be bold and go for at least 3 instances. For instance:</p>
-<div class="code yaml highlight-python"><div class="highlight"><pre>kind: ReplicationController
-apiVersion: v1beta3
-metadata:
-  name: zk
-spec:
-  replicas: 3
-  selector:
-    name: zk
-  template:
-    metadata:
-      labels:
-        name: zk
-    spec:
-      containers:
-      - name: zookeper
-        image: paugamo/k8s-ec2-zookeeper
-        env:
-          - name:   ochopod_cluster
-            value:  ensemble
-
-        ports:
-            - containerPort: 2181
-            - containerPort: 2888
-            - containerPort: 3888
-            - containerPort: 8080
-</pre></div>
-</div>
+<div class="section" id="a-real-zookeeper-ensemble-over-mesosphere-s-dcos">
+<h3>A real Zookeeper ensemble over Mesosphere&#8217;s DCOS !<a class="headerlink" href="#a-real-zookeeper-ensemble-over-mesosphere-s-dcos" title="Permalink to this headline">¶</a></h3>
+<p>It&#8217;s now time to do something a bit more realistic. Go peek at our little <a class="reference external" href="https://github.com/opaugam/marathon-ec2-zookeeper-sample">sample</a> repo. That container is a
+simple example of how to run a containerized <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> ensemble over <a class="reference external" href="https://mesosphere.com/">DCOS</a> by runnning Ochopod. Feel free to explore
+the code and see how it is done.</p>
+<p>Since we&#8217;re running <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> we make sure to expose ports 2181, 2888 and 3888 in the JSON definition. We also expose
+8080 since this is our control port (e.g the port used by the pods to communicate). We are bold and go for 3 instances.</p>
 <p>You&#8217;ll notice we pass <em>ochopod_cluster</em> down to the container. This will tell Ochopod to assemble all those pods into
-one single cluster called <em>ensemble</em>. Please note the corresponding controller will be named differently (which is
-fine).</p>
+one single cluster called <em>ensemble</em>. Please note the corresponding <a class="reference external" href="https://mesosphere.com/">DCOS</a> application will be named differently (which
+is fine).</p>
 <p>Once your containers are running wait a few seconds for the cluster to form and stabilize. You can then test out your
-newly formed ensemble by sending a <em>MNTR</em> command to any pod on TCP 2181. You should get a well-formed response telling
-you the remote server is indeed up and part of a ensemble.</p>
+newly formed ensemble by sending a <em>MNTR</em> command to any pod on what TCP 2181 is remapped to. You should get a
+well-formed response telling you the remote server is indeed up and part of a ensemble.</p>
 <p>That&#8217;s pretty much it. Now scale your controller up. You&#8217;ll again get a functional ensemble (larger this time) after a
 few seconds! Woa now that is cool.</p>
 <p>I picked <a class="reference external" href="http://zookeeper.apache.org">Zookeeper</a> as it&#8217;s a classic case giving dev/ops engineers nightmares. Swap it for any system requiring
@@ -174,7 +146,7 @@ knowledge prior to configuring its nodes and you will then realize how much Ocho
 <li><a class="reference internal" href="#mesos-marathon-ochopod">Mesos, Marathon &amp; Ochopod</a></li>
 <li><a class="reference internal" href="#getting-started">Getting started</a><ul>
 <li><a class="reference internal" href="#try-it-out-locally">Try it out locally</a></li>
-<li><a class="reference internal" href="#a-real-zookeeper-ensemble-over-kubernetes">A real Zookeeper ensemble over Kubernetes !</a></li>
+<li><a class="reference internal" href="#a-real-zookeeper-ensemble-over-mesosphere-s-dcos">A real Zookeeper ensemble over Mesosphere&#8217;s DCOS !</a></li>
 </ul>
 </li>
 </ul>
