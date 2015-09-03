@@ -44,13 +44,14 @@ _______________
 Try it out locally
 ******************
 
-Simply run a local Zookeeper_ server on your workstation. Then install the SDK and run the little shell_ example:
+Simply run a local Zookeeper_ server on your workstation. Then install the sdk (make sure you have pip & git installed),
+get the code and run the little shell_ example:
 
 .. code:: python
 
-    $ cd ochopod-python-sdk/sdk
-    $ python setup.py install
-    $ python ../examples/shell.py
+    $ pip install git+https://github.com/autodeskcloud/ochopod.git
+    $ git clone https://github.com/autodesk-cloud/ochopod.git
+    $ python ochopod/examples/shell.py
     INFO - EC2 marathon bindings started
     INFO - running in local mode (make sure you run a standalone zookeeper)
     INFO - starting marathon.local (marathon/ec2) @ local
@@ -59,53 +60,23 @@ Simply run a local Zookeeper_ server on your workstation. Then install the SDK a
 This pod will terminate after around 5 seconds and runs a trivial bash statement. You can tweak the code and
 experiment. Try turning your Zookeeper_ server on/off and you'll see the pod re-connecting automatically.
 
-A real Zookeeper ensemble over Kubernetes !
-*******************************************
+A real Zookeeper ensemble over Mesosphere's DCOS !
+**************************************************
 
-It's now time to do something a bit more realistic. Go peek at the container_ we use as an example in another of our
-projects. Build and either push it to your hub account or private repository or build the image on each node within
-your cluster if you prefer. This container is a small example of how to run a containerized Zookeeper_ ensemble over
-Kubernetes_. Feel free to explore the code and see how it is done.
+It's now time to do something a bit more realistic. Go peek at our little sample_ repo. That container is a
+simple example of how to run a containerized Zookeeper_ ensemble over DCOS_ by runnning Ochopod. Feel free to explore
+the code and see how it is done.
 
-OK, you have your new image and are now ready to spawn a *replication controller*. Since we're running Zookeeper_ make
-sure to expose ports 2181, 2888 and 3888. Also expose 8080 since this is our control port (e.g the port used by the
-pods to communicate). Be bold and go for at least 3 instances. For instance:
-
-.. code:: yaml
-
-    kind: ReplicationController
-    apiVersion: v1beta3
-    metadata:
-      name: zk
-    spec:
-      replicas: 3
-      selector:
-        name: zk
-      template:
-        metadata:
-          labels:
-            name: zk
-        spec:
-          containers:
-          - name: zookeper
-            image: paugamo/k8s-ec2-zookeeper
-            env:
-              - name:   ochopod_cluster
-                value:  ensemble
-
-            ports:
-                - containerPort: 2181
-                - containerPort: 2888
-                - containerPort: 3888
-                - containerPort: 8080
+Since we're running Zookeeper_ we make sure to expose ports 2181, 2888 and 3888 in the JSON definition. We also expose
+8080 since this is our control port (e.g the port used by the pods to communicate). We are bold and go for 3 instances.
 
 You'll notice we pass *ochopod_cluster* down to the container. This will tell Ochopod to assemble all those pods into
-one single cluster called *ensemble*. Please note the corresponding controller will be named differently (which is
-fine).
+one single cluster called *ensemble*. Please note the corresponding DCOS_ application will be named differently (which
+is fine).
 
 Once your containers are running wait a few seconds for the cluster to form and stabilize. You can then test out your
-newly formed ensemble by sending a *MNTR* command to any pod on TCP 2181. You should get a well-formed response telling
-you the remote server is indeed up and part of a ensemble.
+newly formed ensemble by sending a *MNTR* command to any pod on what TCP 2181 is remapped to. You should get a
+well-formed response telling you the remote server is indeed up and part of a ensemble.
 
 That's pretty much it. Now scale your controller up. You'll again get a functional ensemble (larger this time) after a
 few seconds! Woa now that is cool.
@@ -117,6 +88,7 @@ knowledge prior to configuring its nodes and you will then realize how much Ocho
 
 .. _Cassandra: http://cassandra.apache.org/
 .. _Chef: http://www.getchef.com/chef/
+.. _DCOS: https://mesosphere.com/
 .. _Docker: https://www.docker.com/
 .. _Gossip: http://en.wikipedia.org/wiki/Gossip_protocol
 .. _Kafka: http://kafka.apache.org/
@@ -124,10 +96,9 @@ knowledge prior to configuring its nodes and you will then realize how much Ocho
 .. _Marathon: https://mesosphere.github.io/marathon/
 .. _Mesos: http://mesos.apache.org/
 .. _RabbitMQ: http://www.rabbitmq.com/
+.. _sample: https://github.com/opaugam/marathon-ec2-zookeeper-sample
 .. _shell: https://github.com/autodesk-cloud/ochopod/blob/master/examples/shell.py
 .. _Zookeeper: http://zookeeper.apache.org
-.. _container: https://github.com/autodesk-cloud/ochonetes/tree/master/images/zookeeper
-
 
 
 
