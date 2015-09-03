@@ -25,7 +25,7 @@ been tested.
 
 ### Ochopod + K8S
 
-On a similar note [**Ochonetes**](https://github.com/autodesk-cloud/ochonetes) will run on top of a
+On a similar note [**Ochonetes**](https://github.com/autodesk-cloud/ochonetes) can also run on top of a
 [**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) stack and is equally cool !
 
 ### Your base image
