@@ -97,7 +97,11 @@ def shell(snippet, cwd=None, env=None):
     """
 
     pid = Popen(snippet, shell=True, stdout=PIPE, stderr=PIPE, cwd=cwd, env=env)
-    pid.wait()
+    out = []
+    while pid.poll() is None:
+        line = pid.stdout.readline()
+        if line:
+            out += [line[:-1]]
     code = pid.returncode
-    out = pid.stdout.read().split('\n')
     return code, out
+
