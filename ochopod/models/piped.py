@@ -408,6 +408,7 @@ class Actor(FSM, Piped):
                                          shell=self.shell)
 
                     data.pids += 1
+                    data.next_sanity_check = 0
                     self.hints['process'] = 'running'
                     logger.info('%s : popen() #%d -> started <%s> as pid %s' % (self.path, data.pids, data.command, data.sub.pid))
                     if data.env:

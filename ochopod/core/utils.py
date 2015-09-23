@@ -82,17 +82,21 @@ def retry(timeout, pause=5.0, default=None):
     return decorator
 
 
-def shell(snippet):
+def shell(snippet, cwd=None, env=None):
     """
     Helper invoking a shell command and returning its stdout broken down by lines as a list. The sub-process
     exit code is also returned.
 
     :type snippet: str
     :param snippet: shell snippet, e.g "echo foo > /bar"
+    :type env: dict
+    :param env: optional environment passed to POpen
+    :type cwd: str
+    :param cwd: optional working directory passed to POpen
     :rtype: (int, list) 2-uple
     """
 
-    pid = Popen(snippet, shell=True, stdout=PIPE, stderr=PIPE)
+    pid = Popen(snippet, shell=True, stdout=PIPE, stderr=PIPE, cwd=cwd, env=env)
     pid.wait()
     code = pid.returncode
     out = pid.stdout.read().split('\n')
