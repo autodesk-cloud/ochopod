@@ -118,10 +118,9 @@ class Pod(EC2Marathon):
                 # - we are (assuming to be) deployed on EC2
                 # - get our underlying metadata using curl
                 #
-                def _peek(token, strict=True):
-                    code, lines = shell('curl -f http://169.254.169.254/latest/meta-data/%s' % token)
-                    assert not strict or code is 0, 'unable to lookup EC2 metadata for %s (are you running on EC2 ?)' % token
-                    return lines[0]
+                def _peek(token):
+                    _, lines = shell('curl -f http://169.254.169.254/latest/meta-data/%s' % token)
+                    return lines[0] if lines else ''
 
                 #
                 # - get our local and public IPV4 addresses
@@ -135,7 +134,7 @@ class Pod(EC2Marathon):
                         'ip': _peek('local-ipv4'),
                         'node': _peek('instance-id'),
                         'ports': ports,
-                        'public': _peek('public-ipv4', strict=False),
+                        'public': _peek('public-ipv4'),
                         'task': env['MESOS_TASK_ID'],
                         'zk': ''
                     })
@@ -146,8 +145,8 @@ class Pod(EC2Marathon):
                     # - a regular package install will write the slave settings under /etc/mesos/zk
                     # - the snippet in there looks like zk://10.0.0.56:2181/mesos
                     #
-                    code, lines = shell("cat /etc/mesos/zk")
-                    assert code is 0 and lines[0], 'unable to retrieve the zk connection string'
+                    _, lines = shell("cat /etc/mesos/zk")
+                    assert lines, 'unable to retrieve the zk connection string'
                     return lines[0][5:].split('/')[0]
 
                 def _dcos_deployment():
@@ -158,8 +157,8 @@ class Pod(EC2Marathon):
                     # - the snippet in there is prefixed by MESOS_MASTER= and uses an alias
                     # - it looks like MESOS_MASTER=zk://leader.mesos:2181/mesos
                     #
-                    code, lines = shell("grep MASTER /opt/mesosphere/etc/mesos-slave")
-                    assert code is 0 and lines[0], 'unable to retrieve the zk connection string'
+                    _, lines = shell("grep MASTER /opt/mesosphere/etc/mesos-slave")
+                    assert lines, 'unable to retrieve the zk connection string'
                     return lines[0][18:].split('/')[0]
 
                 #
@@ -176,6 +175,7 @@ class Pod(EC2Marathon):
                     except:
                         pass
 
+                assert hints['ip'] and hints['node'], 'are you running on EC2 ?'
                 assert hints['zk'], 'unable to determine where zookeeper is located (unsupported/bogus setup ?)'
 
             #
