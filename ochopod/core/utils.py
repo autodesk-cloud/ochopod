@@ -101,7 +101,7 @@ def shell(snippet, cwd=None, env=None):
     while pid.poll() is None:
         line = pid.stdout.readline()
         if line:
-            out += [line[:-1]]
+            out += [line[:-1] if line[-1] == '\n' else line]
     code = pid.returncode
     return code, out
 
