@@ -139,27 +139,33 @@ class Pod(EC2Marathon):
                         'zk': ''
                     })
 
-                def _install_from_package():
+                #
+                # - a DCOS slave is setup slightly differently with the settings being environment
+                #   variables set in /opt/mesosphere/etc/mesos-master
+                # - the snippet in there is prefixed by MESOS_ZK= and uses an alias
+                # - it looks like MESOS_ZK=zk://127.0.0.1:2181/mesos
+                #
+                # - a regular package install will write the slave settings under /etc/mesos/zk
+                # - the snippet in there looks like zk://10.0.0.56:2181/mesos
+                #
+                #
+                def _1():
 
-                    #
-                    # - a regular package install will write the slave settings under /etc/mesos/zk
-                    # - the snippet in there looks like zk://10.0.0.56:2181/mesos
-                    #
-                    _, lines = shell("cat /etc/mesos/zk")
-                    assert lines, 'unable to retrieve the zk connection string'
-                    return lines[0][5:].split('/')[0]
-
-                def _dcos_deployment():
-
-                    #
-                    # - a DCOS slave is setup slightly differently with the settings being environment
-                    #   variables set in /opt/mesosphere/etc/mesos-slave
-                    # - the snippet in there is prefixed by MESOS_MASTER= and uses an alias
-                    # - it looks like MESOS_MASTER=zk://leader.mesos:2181/mesos
-                    #
-                    _, lines = shell("grep MASTER /opt/mesosphere/etc/mesos-slave")
-                    assert lines, 'unable to retrieve the zk connection string'
+                    _, lines = shell("grep MESOS_MASTER /opt/mesosphere/etc/mesos-slave-common")
+                    assert lines
                     return lines[0][18:].split('/')[0]
+
+                def _2():
+
+                    _, lines = shell("grep MESOS_MASTER /opt/mesosphere/etc/mesos-slave")
+                    assert lines
+                    return lines[0][18:].split('/')[0]
+
+                def _3():
+
+                    _, lines = shell("cat /etc/mesos/zk")
+                    assert lines
+                    return lines[0][5:].split('/')[0]
 
                 #
                 # - depending on how the slave has been installed we might have to look in various places
@@ -167,7 +173,7 @@ class Pod(EC2Marathon):
                 # - warning, a URL like format such as zk://<ip:port>,..,<ip:port>/mesos is used
                 # - just keep the ip & port part and discard the rest
                 #
-                for method in [_install_from_package, _dcos_deployment]:
+                for method in [_1, _2, _3]:
                     try:
                         hints['zk'] = method()
                         break
