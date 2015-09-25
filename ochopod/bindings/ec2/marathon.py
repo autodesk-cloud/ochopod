@@ -141,13 +141,11 @@ class Pod(EC2Marathon):
 
                 #
                 # - a DCOS slave is setup slightly differently with the settings being environment
-                #   variables set in /opt/mesosphere/etc/mesos-master
-                # - the snippet in there is prefixed by MESOS_ZK= and uses an alias
-                # - it looks like MESOS_ZK=zk://127.0.0.1:2181/mesos
-                #
-                # - a regular package install will write the slave settings under /etc/mesos/zk
-                # - the snippet in there looks like zk://10.0.0.56:2181/mesos
-                #
+                #   variables set in /opt/mesosphere/etc/mesos-slave-* (depending on the DCOS release)
+                # - the snippet in there is prefixed by MESOS_ZK= and uses an alias (it looks like
+                #   MESOS_ZK=zk://127.0.0.1:2181/mesos)
+                # - a regular package install will write the slave settings under /etc/mesos/zk (the snippet in
+                #   there looks like zk://10.0.0.56:2181/mesos)
                 #
                 def _1():
 
