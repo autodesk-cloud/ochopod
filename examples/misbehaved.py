@@ -22,7 +22,7 @@ for whatever reason).
 Just start a local standalone Zookeeper server and run "python misbehaved.py".
 """
 
-from ochopod.bindings.ec2.marathon import Pod
+from ochopod.bindings.generic.marathon import Pod
 from ochopod.models.piped import Actor as Piped
 
 

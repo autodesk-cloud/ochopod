@@ -16,6 +16,7 @@
 #
 import logging
 
+from ochopod.bindings.ec2.marathon import Pod as EC2Marathon
 from ochopod.frameworks.marathon import Marathon
 from ochopod.core.utils import shell
 
@@ -31,25 +32,31 @@ class Pod(Marathon):
     def get_node_details(self):
 
         #
-        # - we are (assuming to be) deployed on EC2
-        # - get our underlying metadata using curl at 169.254.169.254
+        # - try out the other marathon binding flavors
+        # - use the first one that does not assert
         #
-        def _peek(token):
-            _, lines = shell('curl --max-time 1 -f http://169.254.169.254/latest/meta-data/%s' % token)
+        candidates = \
+            [
+                EC2Marathon
+            ]
+
+        for binding in candidates:
+            try:
+
+                return binding().get_node_details()
+
+            except:
+                pass
+
+        #
+        # - nothing worked, default to using ip and hostname as a last resort
+        #
+        def _peek(snippet):
+            _, lines = shell(snippet)
             return lines[0] if lines else ''
 
-        #
-        # - get our local and public IPV4 addresses
-        # - the "node" will show up as the EC2 instance ID
-        # - note we allow the public IPv4 lookup to fail (in case we run in VPC)
-        #
-        hints = \
+        return \
             {
-                'fwk':      'marathon (ec2)',
-                'ip':       _peek('local-ipv4'),
-                'node':     _peek('instance-id'),
-                'public':   _peek('public-ipv4'),
+                'ip':       _peek("""ip -4 -o addr show dev eth0 | awk '{split($4,a,"/");print a[1]}'"""),
+                'node':     _peek('hostname')
             }
-
-        assert hints['ip'] and hints['node'], 'are you running on EC2 ?'
-        return hints

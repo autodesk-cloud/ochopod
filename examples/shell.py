@@ -19,11 +19,11 @@
 This script is what your container should run. You have the flexibility to define what you need to run and how to
 configure it (possibly across a fleet of containers spanning multiple machines).
 
-This minimalistic example will just spawn a shell command using the EC2/Marathon bindings. Just start a local
+This minimalistic example will just spawn a shell command using the Marathon bindings. Just start a local
 standalone Zookeeper server and run "python shell.py".
 """
 
-from ochopod.bindings.ec2.marathon import Pod
+from ochopod.bindings.generic.marathon import Pod
 from ochopod.models.piped import Actor as Piped
 
 

@@ -24,7 +24,7 @@ Too many sanity check failures will turn the pod off (which can be seen in the C
 standalone Zookeeper server and run "python sanity.py".
 """
 
-from ochopod.bindings.ec2.marathon import Pod
+from ochopod.bindings.generic.marathon import Pod
 from ochopod.models.piped import Actor as Piped
 
 

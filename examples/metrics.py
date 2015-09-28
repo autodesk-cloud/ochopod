@@ -20,7 +20,7 @@ This script illustrates how you can report simple user metrics. Just start a loc
 "python metrics.py".
 """
 
-from ochopod.bindings.ec2.marathon import Pod
+from ochopod.bindings.generic.marathon import Pod
 from ochopod.models.piped import Actor as Piped
 from time import time
 
