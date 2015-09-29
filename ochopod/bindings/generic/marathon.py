@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 import logging
 
 from ochopod.bindings.ec2.marathon import Pod as EC2Marathon
@@ -49,14 +50,16 @@ class Pod(Marathon):
                 pass
 
         #
-        # - nothing worked, default to using ip and hostname as a last resort
+        # - nothing worked, default to using getent and $HOST as a last resort
         #
         def _peek(snippet):
             _, lines = shell(snippet)
             return lines[0] if lines else ''
 
+        assert 'HOST' in os.environ, '$HOST not exported ?'
+
         return \
             {
-                'ip':       _peek("""ip -4 -o addr show dev eth0 | awk '{split($4,a,"/");print a[1]}'"""),
-                'node':     _peek('hostname')
+                'ip':       _peek("getent ahostsv4 $HOST | grep STREAM | awk '{print $1}'"),
+                'node':     os.environ['HOST']
             }
