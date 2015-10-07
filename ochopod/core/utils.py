@@ -96,7 +96,7 @@ def shell(snippet, cwd=None, env=None):
     :rtype: (int, list) 2-uple
     """
 
-    pid = Popen(snippet, shell=True, stdout=PIPE, stderr=PIPE, cwd=cwd, env=env)
+    pid = Popen(snippet, close_fds=True, shell=True, stdout=PIPE, stderr=PIPE, cwd=cwd, env=env)
     out = []
     while pid.poll() is None:
         line = pid.stdout.readline()
