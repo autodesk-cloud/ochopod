@@ -17,7 +17,7 @@
 import time
 
 from copy import deepcopy
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT
 
 
 def merge(left, right):
@@ -96,7 +96,7 @@ def shell(snippet, cwd=None, env=None):
     :rtype: (int, list) 2-uple
     """
 
-    pid = Popen(snippet, close_fds=True, shell=True, stdout=PIPE, stderr=PIPE, cwd=cwd, env=env)
+    pid = Popen(snippet, close_fds=True, shell=True, stdout=PIPE, stderr=STDOUT, cwd=cwd, env=env)
     out = []
     while pid.poll() is None:
         line = pid.stdout.readline()
