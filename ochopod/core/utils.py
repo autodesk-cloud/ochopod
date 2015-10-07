@@ -85,7 +85,7 @@ def retry(timeout, pause=5.0, default=None):
 def shell(snippet, cwd=None, env=None):
     """
     Helper invoking a shell command and returning its stdout broken down by lines as a list. The sub-process
-    exit code is also returned. Please note we only pipe stdout.
+    exit code is also returned. Please note we only pipe stdout (stderr being redirected to /dev/null).
 
     :type snippet: str
     :param snippet: shell snippet, e.g "echo foo > /bar"
@@ -96,7 +96,7 @@ def shell(snippet, cwd=None, env=None):
     :rtype: (int, list) 2-uple
     """
 
-    pid = Popen(snippet, close_fds=True, shell=True, stdout=PIPE, stderr=None, cwd=cwd, env=env)
+    pid = Popen('%s 2>/dev/null' % snippet, close_fds=True, shell=True, stdout=PIPE, stderr=None, cwd=cwd, env=env)
     out = []
     while pid.poll() is None:
         line = pid.stdout.readline()
