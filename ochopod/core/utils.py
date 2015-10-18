@@ -98,10 +98,12 @@ def shell(snippet, cwd=None, env=None):
 
     pid = Popen('%s 2>/dev/null' % snippet, close_fds=True, shell=True, stdout=PIPE, stderr=None, cwd=cwd, env=env)
     out = []
-    while pid.poll() is None:
-        line = pid.stdout.readline()
-        if line:
-            out += [line[:-1] if line[-1] == '\n' else line]
+    while True:
+        line = pid.stdout.readline().rstrip('\n')
+        if line == '' and pid.poll() is not None:
+            break
+        out += [line]
+
     code = pid.returncode
     return code, out
 
