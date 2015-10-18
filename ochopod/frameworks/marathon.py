@@ -28,6 +28,7 @@ from ochopod.core.core import Coordinator
 from ochopod.core.fsm import diagnostic, shutdown, spin_lock
 from ochopod.core.utils import shell
 from ochopod.models.reactive import Actor as Reactive
+from os import path
 from pykka import ThreadingFuture
 from pykka.exceptions import Timeout, ActorDeadError
 from flask import Flask, request
@@ -251,6 +252,7 @@ class Marathon(Binding):
             #
             @web.route('/reset', methods=['POST'])
             def _reset():
+                logger.debug('http in -> /reset')
                 coordinator.tell({'request': 'reset'})
                 return '{}', 200
 
@@ -261,6 +263,7 @@ class Marathon(Binding):
             #
             @web.route('/info', methods=['POST'])
             def _info():
+                logger.debug('http in -> /info')
                 keys = \
                     [
                         'application',
@@ -285,9 +288,40 @@ class Marathon(Binding):
             #
             @web.route('/log', methods=['POST'])
             def _log():
+                logger.debug('http in -> /log')
                 with open(ochopod.LOG, 'r+') as log:
                     lines = [line for line in log]
                     return json.dumps(lines), 200
+
+            #
+            # - file upload
+            # - this is meant usually when debugging images, for instance to update some settings prior to
+            #   restarting the sub-process
+            #
+            @web.route('/upload', methods=['POST'])
+            def _upload():
+                logger.debug('http in -> /upload')
+                target = request.headers['X-Path']
+                assert path.isdir(target), '%s is not a valid directory' % target
+                for tag, upload in request.files.items():
+                    upload.save(path.join(target, tag))
+
+                return '', 200
+
+            #
+            # - arbitrary shell invokation (used for debugging)
+            #
+            @web.route('/shell', methods=['POST'])
+            def _shell():
+                snippet = request.headers['X-Shell']
+                code, lines = shell(snippet)
+                out = \
+                    {
+                        'code': code,
+                        'stdout': lines
+                    }
+
+                return json.dumps(out, 200)
 
             #
             # - web-hook used to receive requests from the leader or the CLI tools
@@ -336,11 +370,11 @@ class Marathon(Binding):
                 request.environ.get('werkzeug.server.shutdown')()
                 return '{}', 200
 
+            #
+            # - run werkzeug from a separate thread to avoid blocking the main one
+            # - we'll have to shut it down using a dedicated HTTP POST
+            #
             class _Runner(threading.Thread):
-                """
-                Run werkzeug from a separate thread to avoid blocking the main one. We'll have to shut it down
-                using a dedicated HTTP POST.
-                """
 
                 def run(self):
                     web.run(host='0.0.0.0', port=int(hints['port']), threaded=True)
