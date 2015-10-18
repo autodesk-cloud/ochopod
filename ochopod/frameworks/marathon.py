@@ -321,7 +321,7 @@ class Marathon(Binding):
                         'stdout': lines
                     }
 
-                return json.dumps(out, 200)
+                return json.dumps(out), 200
 
             #
             # - web-hook used to receive requests from the leader or the CLI tools
