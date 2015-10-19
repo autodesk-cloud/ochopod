@@ -33,6 +33,7 @@ from pykka import ThreadingFuture
 from pykka.exceptions import Timeout, ActorDeadError
 from flask import Flask, request
 from requests import post
+from werkzeug.exceptions import default_exceptions, HTTPException
 
 #: Our ochopod logger.
 logger = logging.getLogger('ochopod')
@@ -83,8 +84,15 @@ class Marathon(Binding):
 
         #
         # - instantiate our flask endpoint
+        # - default to a json handler for all HTTP errors
         #
+        def _handler(error):
+            code = error.code if isinstance(error, HTTPException) else 500
+            return '{}', code, {'Content-Type': 'application/json; charset=utf-8'}
+
         web = Flask(__name__)
+        for code in default_exceptions.iterkeys():
+            web.error_handler_spec[None][code] = _handler
 
         #
         # - default presets in case we run outside of marathon (local vm testing)
@@ -254,7 +262,7 @@ class Marathon(Binding):
             def _reset():
                 logger.debug('http in -> /reset')
                 coordinator.tell({'request': 'reset'})
-                return '{}', 200
+                return '{}', 200, {'Content-Type': 'application/json; charset=utf-8'}
 
             #
             # - external hook exposing information about our pod
@@ -280,7 +288,7 @@ class Marathon(Binding):
                     ]
 
                 subset = dict(filter(lambda i: i[0] in keys, hints.iteritems()))
-                return json.dumps(subset), 200
+                return json.dumps(subset), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
             #
             # - external hook exposing our circular log
@@ -291,7 +299,7 @@ class Marathon(Binding):
                 logger.debug('http in -> /log')
                 with open(ochopod.LOG, 'r+') as log:
                     lines = [line for line in log]
-                    return json.dumps(lines), 200
+                    return json.dumps(lines), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
             #
             # - file upload
@@ -302,26 +310,23 @@ class Marathon(Binding):
             def _upload():
                 logger.debug('http in -> /upload')
                 target = request.headers['X-Path']
-                assert path.isdir(target), '%s is not a valid directory' % target
-                for tag, upload in request.files.items():
-                    upload.save(path.join(target, tag))
-
-                return '', 200
+                [upload.save(path.join(target, tag)) for tag, upload in request.files.items()]
+                return '{}', 200, {'Content-Type': 'application/json; charset=utf-8'}
 
             #
             # - arbitrary shell invokation (used for debugging)
             #
             @web.route('/shell', methods=['POST'])
             def _shell():
-                snippet = request.headers['X-Shell']
-                code, lines = shell(snippet)
+                logger.debug('http in -> /shell')
+                code, lines = shell(request.headers['X-Shell'])
                 out = \
                     {
                         'code': code,
                         'stdout': lines
                     }
 
-                return json.dumps(out), 200
+                return json.dumps(out), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
             #
             # - web-hook used to receive requests from the leader or the CLI tools
@@ -350,7 +355,7 @@ class Marathon(Binding):
                     # - we failed to match the specified timeout
                     # - gracefully fail on a HTTP 408
                     #
-                    return '{}', 408
+                    return '{}', 408, {'Content-Type': 'application/json; charset=utf-8'}
 
                 except ActorDeadError:
 
@@ -358,7 +363,7 @@ class Marathon(Binding):
                     # - the executor has been shutdown (probably after a /control/kill)
                     # - gracefully fail on a HTTP 410
                     #
-                    return '{}', 410
+                    return '{}', 410, {'Content-Type': 'application/json; charset=utf-8'}
 
             #
             # - internal hook required to shutdown the web-server
@@ -368,7 +373,7 @@ class Marathon(Binding):
             @web.route('/terminate', methods=['POST'])
             def _terminate():
                 request.environ.get('werkzeug.server.shutdown')()
-                return '{}', 200
+                return '{}', 200, {'Content-Type': 'application/json; charset=utf-8'}
 
             #
             # - run werkzeug from a separate thread to avoid blocking the main one
@@ -387,13 +392,13 @@ class Marathon(Binding):
                 _Runner().start()
                 spin_lock(latch)
                 logger.debug('pod is dead, idling')
-
-                #
-                # - simply idle forever (since the framework would restart any container that terminates)
-                # - /log and /hints HTTP requests will succeed (and show the pod as being killed)
-                # - any control request will now fail
-                #
                 while 1:
+
+                    #
+                    # - simply idle forever (since the framework would restart any container that terminates)
+                    # - /log and /hints HTTP requests will succeed (and show the pod as being killed)
+                    # - any control request will now fail
+                    #
                     time.sleep(60.0)
 
             finally:
