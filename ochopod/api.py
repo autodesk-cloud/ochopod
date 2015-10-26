@@ -54,7 +54,9 @@ an explicit working directory) could be:
         class Model(Reactive):
 
             damper = 30.0
+
             full_shutdown = True
+
             sequential = True
 
         class Strategy(Piped):
@@ -321,8 +323,10 @@ class Reactive(Model):
     #: impractical.
     damper = 0.0
 
-    #: Array listing what clusters we depend on (e.g 'zookeeper' for instance). Those clusters *must* be registered
-    #: in the same namespace. A re-configuration will be triggered if any dependency changes.
+    #: Array listing what clusters we depend on (e.g 'zookeeper' for instance). We support both absolute and relative
+    #: dependencies. If the identifier starts with '/' it is absolute otherwise it is assumed to be located within
+    #: the same namespace. In addition wildcards may be used (e.g 'zoo*per' or 'service.database.*') to depend on
+    #: zero or more clusters. A pod re-configuration will be triggered if any dependency changes.
     depends_on = []
 
     #: If true the leader will first turn off all pods before configuring them.

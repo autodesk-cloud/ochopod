@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import fnmatch
 import json
 import logging
-import pykka
 
 from kazoo.exceptions import NoNodeError
 from ochopod.core.core import ROOT, SAMPLING
@@ -32,14 +32,15 @@ class Watcher(FSM):
     to keep track of the pod dependencies.
     """
 
-    def __init__(self, model, zk, scope, tag):
+    def __init__(self, model, zk, scope, tag, remote):
         super(Watcher, self).__init__()
 
         self.model = model
         self.path = 'watcher (%s.%s)' % (scope, tag)
+        self.pod = '%s.%s' % (scope, tag)
         self.query = 1
+        self.remote = remote
         self.scope = scope
-        self.tag = tag
         self.zk = zk
 
     def reset(self, data):
@@ -75,25 +76,71 @@ class Watcher(FSM):
 
             #
             # - the flip-flop trigger is on
-            # - issue a get() on the dependency snapshot/ node
-            # - if this node is not there yet (or the dependency path invalid), no big deal
+            # - go get to the zk nodes we want to look at
+            # - any dependency starting with '/' is absolute
+            # - the lookup will be done starting in the pod's namespace otherwise
             #
             pods = {}
-            try:
-                path = '%s/%s.%s/snapshot' % (ROOT, self.scope, self.tag)
-                value, stat = self.zk.get(path, watch=self.feedback)
-                try:
-                    pods = json.loads(value)
-                except ValueError:
-                    pass
+            where = self.remote[1:] if self.remote[0] == '/' else '%s.%s' % (self.scope, self.remote)
+            if '*' in self.remote:
+
+                #
+                # - regex dependency, which is slightly more involved
+                # - from @pferro -> leave a watch on the ROOT in case a new node matching
+                #   the regex appears later on
+                # - each zk node matching the regex will also leave a watch on
+                #
+                for child in self.zk.get_children(ROOT, watch=self.feedback):
+                    if fnmatch.fnmatch(child, where):
+                        try:
+
+                            #
+                            # -
+                            #
+                            if child == self.pod:
+                                continue
+
+                            #
+                            # - same as the regular case: grab the json payload and leave a watch
+                            #
+                            path = '%s/%s/snapshot' % (ROOT, child)
+                            value, stat = self.zk.get(path, watch=self.feedback)
+                            try:
+                                pods.update(json.loads(value))
+                            except ValueError:
+                                pass
+
+                        except NoNodeError:
+                            pass
 
                 #
                 # - unset the flip-flop
                 #
                 self.query = 0
 
-            except NoNodeError:
-                pass
+            else:
+
+                #
+                # - no regex specified -> simply do a single get() on the appropriate zk node
+                # - issue a get() on the dependency snapshot/ node
+                # - if this node is not there yet (or the dependency path invalid), no big deal
+                #
+                try:
+                    if where != self.pod:
+                        path = '%s/%s/snapshot' % (ROOT, where)
+                        value, stat = self.zk.get(path, watch=self.feedback)
+                        try:
+                            pods.update(json.loads(value))
+                        except ValueError:
+                            pass
+
+                    #
+                    # - unset the flip-flop
+                    #
+                    self.query = 0
+
+                except NoNodeError:
+                    pass
 
             #
             # - notify the model we have a snapshot for that dependency
@@ -104,7 +151,7 @@ class Watcher(FSM):
                 self.model.tell(
                     {
                         'request': 'snapshot update',
-                        'key': self.tag,
+                        'key': self.remote,
                         'pods': pods
                     })
 

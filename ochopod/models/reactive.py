@@ -17,13 +17,11 @@
 import hashlib
 import json
 import logging
-import pykka
 import requests
 import time
 
 from copy import deepcopy
-from flask import Flask, request
-from kazoo.exceptions import NoNodeError, NodeExistsError
+from kazoo.exceptions import NodeExistsError
 from ochopod.api import Reactive
 from ochopod.core.core import ROOT, SAMPLING
 from ochopod.core.fsm import Aborted, FSM, diagnostic, shutdown
@@ -140,7 +138,7 @@ class Actor(FSM, Reactive):
         # - make sure to look for clusters within our own namespace
         # - start spinning (the watcher updates will be processed in there)
         #
-        self.watchers += [Remote.start(self.actor_ref, self.zk, self.scope, tag) for tag in self.depends_on]
+        self.watchers += [Remote.start(self.actor_ref, self.zk, self.scope, self.tag, tag) for tag in self.depends_on]
         logger.debug('%s : watching %d dependencies' % (self.path, len(self.depends_on)))
         logger.info('%s : leading for cluster %s.%s' % (self.path, self.scope, self.tag))
         return 'spin', data, 0
