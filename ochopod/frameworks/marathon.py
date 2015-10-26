@@ -84,11 +84,11 @@ class Marathon(Binding):
 
         #
         # - instantiate our flask endpoint
-        # - default to a json handler for all HTTP errors
+        # - default to a json handler for all HTTP errors (including an unexpected 500)
         #
         def _handler(error):
-            code = error.code if isinstance(error, HTTPException) else 500
-            return '{}', code, {'Content-Type': 'application/json; charset=utf-8'}
+            http = error.code if isinstance(error, HTTPException) else 500
+            return '{}', http, {'Content-Type': 'application/json; charset=utf-8'}
 
         web = Flask(__name__)
         for code in default_exceptions.iterkeys():
@@ -184,8 +184,8 @@ class Marathon(Binding):
                     # - $MESOS_MASTER is located in /opt/mesosphere/etc/mesos-slave-common
                     # - the snippet in there is prefixed by MESOS_ZK=zk://<ip:port>/mesos
                     #
+                    logger.debug('checking /opt/mesosphere/etc/mesos-slave-common...')
                     _, lines = shell("grep MESOS_MASTER /opt/mesosphere/etc/mesos-slave-common")
-                    assert lines
                     return lines[0][18:].split('/')[0]
 
                 def _2():
@@ -194,8 +194,8 @@ class Marathon(Binding):
                     # - same as above except for slightly older DCOS releases
                     # - $MESOS_MASTER is located in /opt/mesosphere/etc/mesos-slave
                     #
+                    logger.debug('checking /opt/mesosphere/etc/mesos-slave...')
                     _, lines = shell("grep MESOS_MASTER /opt/mesosphere/etc/mesos-slave")
-                    assert lines
                     return lines[0][18:].split('/')[0]
 
                 def _3():
@@ -204,8 +204,8 @@ class Marathon(Binding):
                     # - a regular package install will write the slave settings under /etc/mesos/zk (the snippet in
                     #   there looks like zk://10.0.0.56:2181/mesos)
                     #
+                    logger.debug('checking /etc/mesos/zk...')
                     _, lines = shell("cat /etc/mesos/zk")
-                    assert lines
                     return lines[0][5:].split('/')[0]
 
                 #
@@ -219,7 +219,7 @@ class Marathon(Binding):
                         hints['zk'] = method()
                         break
 
-                    except:
+                    except Exception:
                         pass
 
             #

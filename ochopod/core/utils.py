@@ -96,13 +96,15 @@ def shell(snippet, cwd=None, env=None):
     :rtype: (int, list) 2-uple
     """
 
-    pid = Popen('%s 2>/dev/null' % snippet, close_fds=True, shell=True, stdout=PIPE, stderr=None, cwd=cwd, env=env)
     out = []
+    pid = Popen('%s 2>/dev/null' % snippet, close_fds=True, shell=True, stdout=PIPE, stderr=None, cwd=cwd, env=env)
     while True:
-        line = pid.stdout.readline().rstrip('\n')
-        if line == '' and pid.poll() is not None:
+        code = pid.poll()
+        line = pid.stdout.readline()
+        if not line and code is not None:
             break
-        out += [line]
+        elif line:
+            out += [line.rstrip('\n')]
 
     code = pid.returncode
     return code, out
