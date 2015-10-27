@@ -18,12 +18,14 @@ import json
 import logging
 import ochopod
 import os
+import tempfile
 import threading
 import time
+import shutil
 
+from argparse import ArgumentParser
 from copy import deepcopy
-from ochopod.api import LifeCycle, Model
-from ochopod.api import Binding
+from ochopod.api import Binding, LifeCycle, Model, Tool
 from ochopod.core.core import Coordinator
 from ochopod.core.fsm import diagnostic, shutdown, spin_lock
 from ochopod.core.utils import shell
@@ -74,7 +76,7 @@ class Marathon(Binding):
     def get_node_details(self):
         raise NotImplementedError
 
-    def boot(self, lifecycle, model=Reactive, local=0):
+    def boot(self, lifecycle, model=Reactive, tools=None, local=False):
 
         #
         # - quick check to make sure we get the right implementations
@@ -229,6 +231,12 @@ class Marathon(Binding):
             assert hints['cluster'] and hints['namespace'], 'no cluster and/or namespace defined (user error ?)'
 
             #
+            # - load the tools
+            #
+            if tools:
+                tools = {tool.tag: tool for tool in [clz() for clz in tools if issubclass(clz, Tool)] if tool.tag}
+
+            #
             # - start the life-cycle actor which will pass our hints (as a json object) to its underlying sub-process
             # - start our coordinator which will connect to zookeeper and attempt to lead the cluster
             # - upon grabbing the lock the model actor will start and implement the configuration process
@@ -302,24 +310,80 @@ class Marathon(Binding):
                     return json.dumps(lines), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
             #
-            # - file upload
-            # - this is meant usually when debugging images, for instance to update some settings prior to
-            #   restarting the sub-process
+            # - RPC call to run a custom tool within the pod
             #
-            @web.route('/upload', methods=['POST'])
-            def _upload():
-                logger.debug('http in -> /upload')
-                target = request.headers['X-Path']
-                [upload.save(path.join(target, tag)) for tag, upload in request.files.items()]
-                return '{}', 200, {'Content-Type': 'application/json; charset=utf-8'}
+            @web.route('/exec', methods=['POST'])
+            def _exec():
+                logger.debug('http in -> /exec')
 
-            #
-            # - arbitrary shell invokation (used for debugging)
-            #
-            @web.route('/shell', methods=['POST'])
-            def _shell():
-                logger.debug('http in -> /shell')
-                code, lines = shell(request.headers['X-Shell'])
+                #
+                # - make sure the command (first token in the X-Shell header) maps to a tool
+                # - if no match abort on a 404
+                #
+                line = request.headers['X-Shell']
+                tokens = line.split(' ')
+                cmd = tokens[0]
+                if cmd not in tools:
+                    return '{}', 404, {'Content-Type': 'application/json; charset=utf-8'}
+
+                code = 1
+                tool = tools[cmd]
+
+                #
+                # - make sure the parser does not sys.exit()
+                #
+                class _Parser(ArgumentParser):
+                    def exit(self, status=0, message=None):
+                        raise ValueError(message)
+
+                #
+                # - prep a temporary directory
+                # - invoke define_cmdline_parsing()
+                # - switch off parsing if NotImplementedError is raised
+                #
+                use_parser = 1
+                parser = _Parser(prog=tool.tag)
+                try:
+                    tool.define_cmdline_parsing(parser)
+
+                except NotImplementedError:
+                    use_parser = 0
+
+                tmp = tempfile.mkdtemp()
+                try:
+
+                    #
+                    # - parse the command line
+                    # - upload any attachment
+                    #
+                    args = parser.parse_args(tokens[1:]) if use_parser else ' '.join(tokens[1:])
+                    for tag, upload in request.files.items():
+                        where = path.join(tmp, tag)
+                        logger.debug('uploading %s @ %s' % (tag, tmp))
+                        upload.save(where)
+
+                    #
+                    # - run the tool method
+                    # - pass the temporary directory as well
+                    #
+                    logger.info('invoking "%s"' % line)
+                    code, lines = tool.body(args, tmp)
+
+                except ValueError as failure:
+
+                    lines = [parser.format_help() if failure.message is None else failure.message]
+
+                except Exception as failure:
+
+                    lines = ['unexpected failure -> %s' % failure]
+
+                finally:
+
+                    #
+                    # - make sure to cleanup our temporary directory
+                    #
+                    shutil.rmtree(tmp)
+
                 out = \
                     {
                         'code': code,

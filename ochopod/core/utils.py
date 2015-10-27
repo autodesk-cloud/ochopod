@@ -106,6 +106,5 @@ def shell(snippet, cwd=None, env=None):
         elif line:
             out += [line.rstrip('\n')]
 
-    code = pid.returncode
-    return code, out
+    return pid.returncode, out
 

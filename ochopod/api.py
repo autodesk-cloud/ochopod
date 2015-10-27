@@ -160,6 +160,51 @@ class Cluster(object):
         pass
 
 
+class Tool(object):
+    """
+    Abstract class defining a simple tool hosted by the pod. You can define a set of tools and register them when
+    you boot your pod. HTTP calls to /exec will then direct the pod to run them. This mechanism is used for instance
+    by the ochothon CLI interface as a way to expose special functionality on select pods (typically some cleanup
+    or maintenance procedure).
+
+    Those tools are executed by the internal pod web-server and support transparent file uploads from the CLI
+    interface.
+    """
+
+    #: mandatory tool identifier (the tool will be skipped if not specified)
+    tag = None
+
+    def define_cmdline_parsing(self, parser):
+        """
+        Optional callback invoked with a :class:`ArgumentParser` instance. You can use it to define your
+        own command-line options & switches. If left undefined the callback will raise and disable argument
+        parsing altogether.
+
+        Please be aware that some command-line switches will be preempted by the CLI interface (for instance -d or
+        -h).
+
+        :type parser: :class:`ArgumentParser`
+        :param parser: the command-line parser used by the pod
+        """
+        raise NotImplementedError
+
+    def body(self, args, cwd):
+        """
+        Mandatory callback implementing the tool logic. The tool must return a 2-uple made of an integer code
+        (exit code whatever the meaning is) and an array of strings (log). Those will be passed back to the caller.
+
+        If define_cmdline_parsing() is specified the method will be passed a dict (e.g the output of the parser). If
+        not defined the method will be passed the raw command line as a string (including switches).
+
+        :type args: dict or str
+        :param args: parsed arguments or raw command line
+        :type cwd: str
+        :param cwd: temporary directory into which files are uploaded (if applicable)
+        :rtype: the return code + log lines as a 2-uple
+        """
+        raise NotImplementedError
+
+
 class Model(object):
     """
     Abstract class defining a clustering model (e.g how pods belonging to the same family will orchestrate to
@@ -392,7 +437,7 @@ class Binding(object):
     for instance).
     """
 
-    def boot(self, lifecycle, model=Reactive, local=False):
+    def boot(self, lifecycle, model=Reactive, tools=None, local=False):
         """
         Pod entry point. You must specify a class that implements :class:`LifeCycle' and may also specify the
         clustering model you wish to use.
@@ -410,6 +455,8 @@ class Binding(object):
         :param lifecycle: the lifecycle implementation class to use
         :type model: :class:`Model`
         :param model: the model implementation class to use (defaulted to :class:`Reactive`)
+        :type tools: list
+        :param tools: array of tools supported by the pod or None
         :type local: bool
         :param local: if set to True the pod will run locally (and assume a local Zookeeper server)
         """
