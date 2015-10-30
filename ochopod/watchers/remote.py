@@ -95,20 +95,25 @@ class Watcher(FSM):
                         try:
 
                             #
-                            # -
+                            # - do *not* include the current pod in the watch
+                            # - this edge case could be hit when using absolute dependencies
                             #
                             if child == self.pod:
                                 continue
 
                             #
                             # - same as the regular case: grab the json payload and leave a watch
+                            # - from @pferro -> we need to make sure we leave a watch around in case the
+                            #   snapshot node does not exist yet (the regular case does not require it since
+                            #   the self.query flip-flop would be left on by default)
                             #
                             path = '%s/%s/snapshot' % (ROOT, child)
-                            value, stat = self.zk.get(path, watch=self.feedback)
-                            try:
-                                pods.update(json.loads(value))
-                            except ValueError:
-                                pass
+                            if self.zk.exists(path, watch=self.feedback):
+                                value, stat = self.zk.get(path, watch=self.feedback)
+                                try:
+                                    pods.update(json.loads(value))
+                                except ValueError:
+                                    pass
 
                         except NoNodeError:
                             pass

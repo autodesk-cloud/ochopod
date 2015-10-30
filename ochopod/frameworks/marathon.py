@@ -235,6 +235,7 @@ class Marathon(Binding):
             #
             if tools:
                 tools = {tool.tag: tool for tool in [clz() for clz in tools if issubclass(clz, Tool)] if tool.tag}
+                logger.info('supporting tools %s' % ', '.join(tools.keys()))
 
             #
             # - start the life-cycle actor which will pass our hints (as a json object) to its underlying sub-process
@@ -268,7 +269,9 @@ class Marathon(Binding):
             #
             @web.route('/reset', methods=['POST'])
             def _reset():
+
                 logger.debug('http in -> /reset')
+
                 coordinator.tell({'request': 'reset'})
                 return '{}', 200, {'Content-Type': 'application/json; charset=utf-8'}
 
@@ -279,6 +282,7 @@ class Marathon(Binding):
             #
             @web.route('/info', methods=['POST'])
             def _info():
+
                 logger.debug('http in -> /info')
                 keys = \
                     [
@@ -304,6 +308,7 @@ class Marathon(Binding):
             #
             @web.route('/log', methods=['POST'])
             def _log():
+
                 logger.debug('http in -> /log')
                 with open(ochopod.LOG, 'r+') as log:
                     lines = [line for line in log]
@@ -314,6 +319,7 @@ class Marathon(Binding):
             #
             @web.route('/exec', methods=['POST'])
             def _exec():
+
                 logger.debug('http in -> /exec')
 
                 #
@@ -323,7 +329,7 @@ class Marathon(Binding):
                 line = request.headers['X-Shell']
                 tokens = line.split(' ')
                 cmd = tokens[0]
-                if cmd not in tools:
+                if not tools or cmd not in tools:
                     return '{}', 404, {'Content-Type': 'application/json; charset=utf-8'}
 
                 code = 1
@@ -402,16 +408,24 @@ class Marathon(Binding):
             @web.route('/control/<task>', methods=['POST'])
             @web.route('/control/<task>/<timeout>', methods=['POST'])
             def _control(task, timeout='60'):
+
+                logger.debug('http in -> /control/%s' % task)
+                if task not in ['check', 'on', 'off', 'ok', 'kill', 'signal']:
+
+                    #
+                    # - fail on a HTTP 400 if the request is not supported
+                    #
+                    return '{}', 400, {'Content-Type': 'application/json; charset=utf-8'}
+
                 try:
 
                     ts = time.time()
-                    logger.debug('http in -> /control/%s' % task)
                     latch = ThreadingFuture()
                     executor.tell({'request': task, 'latch': latch, 'data': request.data})
                     js, code = latch.get(timeout=int(timeout))
                     ms = time.time() - ts
                     logger.debug('http out -> HTTP %s (%d ms)' % (code, ms))
-                    return json.dumps(js), code
+                    return json.dumps(js), code, {'Content-Type': 'application/json; charset=utf-8'}
 
                 except Timeout:
 
@@ -436,6 +450,7 @@ class Marathon(Binding):
             #
             @web.route('/terminate', methods=['POST'])
             def _terminate():
+
                 request.environ.get('werkzeug.server.shutdown')()
                 return '{}', 200, {'Content-Type': 'application/json; charset=utf-8'}
 
