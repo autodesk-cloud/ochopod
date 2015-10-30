@@ -250,6 +250,7 @@ class Marathon(Binding):
             logger.info('starting %s.%s (marathon) @ %s' % (hints['namespace'], hints['cluster'], hints['node']))
             breadcrumbs = deepcopy(hints)
             hints['metrics'] = {}
+            hints['dependencies'] = model.depends_on
             env.update({'ochopod': json.dumps(hints)})
             executor = lifecycle.start(env, latch, hints)
             coordinator = Coordinator.start(
@@ -271,7 +272,6 @@ class Marathon(Binding):
             def _reset():
 
                 logger.debug('http in -> /reset')
-
                 coordinator.tell({'request': 'reset'})
                 return '{}', 200, {'Content-Type': 'application/json; charset=utf-8'}
 
@@ -279,6 +279,7 @@ class Marathon(Binding):
             # - external hook exposing information about our pod
             # - this is a subset of what's registered in zookeeper at boot-time
             # - the data is dynamic and updated from time to time by the model and executor actors
+            # - from @pferro -> the pod's dependencies defined in the model are now added as well
             #
             @web.route('/info', methods=['POST'])
             def _info():
@@ -287,6 +288,7 @@ class Marathon(Binding):
                 keys = \
                     [
                         'application',
+                        'dependencies',
                         'ip',
                         'metrics',
                         'node',
