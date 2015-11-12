@@ -5,28 +5,35 @@
 ### Overview
 
 This project is a small [**Python**](https://www.python.org/) package you can use to boot your
-[**Docker**](https://www.docker.com/) containers. It is configured to interface with
-[**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) or various [**Apache Mesos**](http://mesos.apache.org/)
-frameworks and coordinates how a given family of containers should cluster together at run-time. It transparently
-manages dependencies and port remapping as well. In short you effectively apply an _overlay_ to your provisioning stack
-that enables you to do _more_ !
+[**Docker**](https://www.docker.com/) containers. It is by default configured to interface with
+[**Apache Mesos**](http://mesos.apache.org/) and its [**Marathon**](https://mesosphere.github.io/marathon/) framework
+but could easily be extended to run off [**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) and
+the like.
+
+### What does it do ?
+
+Ochopod coordinates how a given family of containers should cluster together at run-time. It transparently
+manages dependencies and port remapping as well. In short you effectively apply an _overlay_ to your provisioning
+stack that enables you to do _more_ ! It is a mix between an _init system_ and a distributed _discovery mechanism_.
 
 Ochopod internally relies on [**Apache Zookeeper**](http://zookeeper.apache.org/) for synchronization and metadata
 storage.
 
-### Ochopod + Mesos + Marathon
+### Ochopod + Mesos + Marathon + CLI == PaaS
 
 Please have a look at our [**Ochothon**](https://github.com/autodesk-cloud/ochothon) stack and see how we built a
 quick PaaS on top of [**Marathon**](https://mesosphere.github.io/marathon/) including a comprehensive tool suite, a
-cool web-shell, a tiny cli and more !
+cool web-shell, a tiny CLI and more !
 
 Both a manual package install and the spiffy [**DCOS deployments from Mesosphere**](https://mesosphere.com/) have
 been tested.
 
-### Ochopod + K8S
+### How is it different ?
 
-On a similar note [**Ochonetes**](https://github.com/autodesk-cloud/ochonetes) can also run on top of a
-[**Kubernetes**](https://github.com/GoogleCloudPlatform/kubernetes) stack and is equally cool !
+The DIY PaaS market is filled with interesting offers and every company has its own take on how to do things. Now
+Ochopod is different when it comes to clustering and idempotency. Our general goal is to remain non opiniated (and
+lightweight) but yet allow for watertight orchestration. Our _finite state machine_ design coupled to Zookeeper is
+quite unique.
 
 ### Your base image
 
