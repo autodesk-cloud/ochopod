@@ -12,6 +12,6 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get -y update && apt-get -y upgrade && apt-get -y install git curl python python-requests supervisor
 RUN curl https://bootstrap.pypa.io/get-pip.py | python
 ADD resources/supervisor/supervisord.conf /etc/supervisor/supervisord.conf
-RUN pip install git+https://github.com/autodesk-cloud/ochopod.git
+RUN pip install git+https://github.com/UncleBarney/ochopod.git
 RUN apt-get -y autoremove
 CMD /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
