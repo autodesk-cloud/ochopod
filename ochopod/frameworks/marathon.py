@@ -35,6 +35,7 @@ from pykka import ThreadingFuture
 from pykka.exceptions import Timeout, ActorDeadError
 from flask import Flask, request
 from requests import post
+from urlparse import urlparse
 from werkzeug.exceptions import default_exceptions, HTTPException
 
 #: Our ochopod logger.
@@ -55,8 +56,8 @@ class Marathon(Binding):
         - *ochopod_debug*: turns debug logging on if set to "true".
         - *ochopod_namespace*: namespace as dot separated tokens (e.g "my-app.staging"), defaulted to "marathon".
         - *ochopod_port*: pod control port on which we listen for HTTP requests, defaulted to 8080.
-        - *ochopod_zk*: location of ZK ensemble. The string must in the format of zk://<ip>:<port>,
-          for example, zk://10.0.0.1:2818
+        - *ochopod_zk*: location of ZK ensemble, default to an empty string. This string must be a well formed ZK URL
+         for instance zk://127.0.0.1:2181
 
     The following payload is registered by the pod at boot time:
 
@@ -187,11 +188,11 @@ class Marathon(Binding):
                     #
                     # - most recent DCOS release
                     # - $MESOS_MASTER is located in /opt/mesosphere/etc/mesos-slave-common
-                    # - the snippet in there is prefixed by MESOS_ZK=zk://<ip:port>/mesos
+                    # - the snippet in there is prefixed by MESOS_MASTER=zk://<ip:port>/mesos
                     #
                     logger.debug('checking /opt/mesosphere/etc/mesos-slave-common...')
                     _, lines = shell("grep MESOS_MASTER /opt/mesosphere/etc/mesos-slave-common")
-                    return lines[0][18:].split('/')[0]
+                    return lines[0][13:]
 
                 def _2():
 
@@ -201,7 +202,7 @@ class Marathon(Binding):
                     #
                     logger.debug('checking /opt/mesosphere/etc/mesos-slave...')
                     _, lines = shell("grep MESOS_MASTER /opt/mesosphere/etc/mesos-slave")
-                    return lines[0][18:].split('/')[0]
+                    return lines[0][13:]
 
                 def _3():
 
@@ -211,28 +212,26 @@ class Marathon(Binding):
                     #
                     logger.debug('checking /etc/mesos/zk...')
                     _, lines = shell("cat /etc/mesos/zk")
-                    return lines[0][5:].split('/')[0]
+                    return lines[0]
 
                 def _4():
 
                     #
                     # - look for ZK from environment variables
                     # - user can pass down ZK using $ochopod_zk
+                    # - this last-resort situation is used mostly for debugging
                     #
                     logger.debug('checking $ochopod_zk environment variable...')
-                    if env['ochopod_zk']:
-                        logger.debug('found $ochopod_zk environment variable...')
-                        return env['ochopod_zk'][5:].split('/')[0]
+                    return env['ochopod_zk']
 
                 #
                 # - depending on how the slave has been installed we might have to look in various places
                 #   to find out what our zookeeper connection string is
-                # - warning, a URL like format such as zk://<ip:port>,..,<ip:port>/mesos is used
-                # - just keep the ip & port part and discard the rest
+                # - use urlparse to keep the host:port part of the URL (possibly including a login+password)
                 #
                 for method in [_1, _2, _3, _4]:
                     try:
-                        hints['zk'] = method()
+                        hints['zk'] = urlparse(method()).netloc
                         break
 
                     except Exception:

@@ -26,7 +26,7 @@ quick PaaS on top of [**Marathon**](https://mesosphere.github.io/marathon/) incl
 cool web-shell, a tiny CLI and more !
 
 Both a manual package install and the spiffy [**DCOS deployments from Mesosphere**](https://mesosphere.com/) have
-been tested.
+been tested. We also tested it on the cool [**Mantl.io**](http://mantl.io/) project.
 
 ### How is it different ?
 
