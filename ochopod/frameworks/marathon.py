@@ -55,6 +55,8 @@ class Marathon(Binding):
         - *ochopod_debug*: turns debug logging on if set to "true".
         - *ochopod_namespace*: namespace as dot separated tokens (e.g "my-app.staging"), defaulted to "marathon".
         - *ochopod_port*: pod control port on which we listen for HTTP requests, defaulted to 8080.
+        - *ochopod_zk*: location of ZK ensemble. The string must in the format of zk://<ip>:<port>,
+          for example, zk://10.0.0.1:2818
 
     The following payload is registered by the pod at boot time:
 
@@ -113,6 +115,7 @@ class Marathon(Binding):
                 'ochopod_port':         '8080',
                 'ochopod_start':        'true',
                 'ochopod_task':         '',
+                'ochopod_zk':           '',
                 'PORT_8080':            '8080'
             }
 
@@ -176,7 +179,7 @@ class Marathon(Binding):
                 hints.update(self.get_node_details())
 
                 #
-                # - lookup for the zookeeper connection string on disk
+                # - lookup for the zookeeper connection string from environment variable or on disk
                 # - we have to look into different places depending on how mesos was installed
                 #
                 def _1():
@@ -210,13 +213,24 @@ class Marathon(Binding):
                     _, lines = shell("cat /etc/mesos/zk")
                     return lines[0][5:].split('/')[0]
 
+                def _4():
+
+                    #
+                    # - look for ZK from environment variables
+                    # - user can pass down ZK using $ochopod_zk
+                    #
+                    logger.debug('checking $ochopod_zk environment variable...')
+                    if env['ochopod_zk']:
+                        logger.debug('found $ochopod_zk environment variable...')
+                        return env['ochopod_zk'][5:].split('/')[0]
+
                 #
                 # - depending on how the slave has been installed we might have to look in various places
                 #   to find out what our zookeeper connection string is
                 # - warning, a URL like format such as zk://<ip:port>,..,<ip:port>/mesos is used
                 # - just keep the ip & port part and discard the rest
                 #
-                for method in [_1, _2, _3]:
+                for method in [_1, _2, _3, _4]:
                     try:
                         hints['zk'] = method()
                         break
