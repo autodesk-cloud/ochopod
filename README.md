@@ -1,5 +1,7 @@
 ## Ochopod 
 
+[![Join the chat at https://gitter.im/autodesk-cloud/ochopod](https://badges.gitter.im/autodesk-cloud/ochopod.svg)](https://gitter.im/autodesk-cloud/ochopod?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![Build Status](https://travis-ci.org/autodesk-cloud/ochopod.svg)](https://travis-ci.org/autodesk-cloud/ochopod)
 
 ### Overview
